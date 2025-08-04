@@ -1,3 +1,5 @@
+//==============================================================================
+// Calculator.cpp
 #include "Calculator.h"
 #include <sstream>
 #include <algorithm>
@@ -13,12 +15,14 @@ Calculator::~Calculator()
     // Destructor - nothing specific to clean up
 }
 
-ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int startByte, int numBytes, ChecksumType type)
+ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int startByte, int param2,
+    ChecksumType checksumType, RangeType rangeType)
 {
     ChecksumResult result;
     result.checksum = 0;
     result.success = false;
     result.errorMessage = "";
+    result.bytesProcessed = 0;
 
     // Parse the hex string into bytes
     std::vector<int> bytes = parseHexString(hexString);
@@ -29,6 +33,19 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         return result;
     }
 
+    // Calculate the actual number of bytes to process based on range type
+    int numBytes = 0;
+    if (rangeType == RangeType::StartLength)
+    {
+        numBytes = param2; // param2 is the length
+    }
+    else // RangeType::StartEnd
+    {
+        // param2 is offset from end - calculate length
+        int endIndex = static_cast<int>(bytes.size()) - param2;
+        numBytes = endIndex - startByte;
+    }
+
     // Validate parameters
     if (startByte < 0 || startByte >= static_cast<int>(bytes.size()))
     {
@@ -36,14 +53,25 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         return result;
     }
 
-    if (numBytes <= 0 || (startByte + numBytes) > static_cast<int>(bytes.size()))
+    if (numBytes <= 0)
     {
-        result.errorMessage = "Invalid number of bytes or exceeds string length";
+        if (rangeType == RangeType::StartEnd)
+            result.errorMessage = "End offset results in invalid range (check start byte and end offset)";
+        else
+            result.errorMessage = "Invalid number of bytes";
         return result;
     }
 
+    if ((startByte + numBytes) > static_cast<int>(bytes.size()))
+    {
+        result.errorMessage = "Range exceeds string length";
+        return result;
+    }
+
+    result.bytesProcessed = numBytes;
+
     // Calculate checksum based on type
-    if (type == ChecksumType::Additive)
+    if (checksumType == ChecksumType::Additive)
     {
         // Roland-style additive checksum
         int sum = 0;
@@ -54,7 +82,7 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         // Roland-style checksum: take lower 7 bits and compute 2's complement
         result.checksum = (128 - (sum % 128)) % 128;
     }
-    else if (type == ChecksumType::XOR)
+    else if (checksumType == ChecksumType::XOR)
     {
         // XOR checksum
         int xorResult = 0;

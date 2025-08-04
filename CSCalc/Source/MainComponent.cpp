@@ -31,11 +31,9 @@ MainComponent::MainComponent()
 
     setSize(600, 450);
 }
-
 MainComponent::~MainComponent()
 {
 }
-
 void MainComponent::paint(juce::Graphics& g)
 {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
@@ -85,9 +83,16 @@ void MainComponent::showSysExInputDialog()
     // Add text editor for SysEx string
     alertWindow->addTextEditor("sysex", "f0 41 10 57 12 03 00 01 10 31 3b f7", "SysEx String (hex bytes):");
 
-    // Add text editors for start and length
+    // Add radio buttons for range specification method
+    juce::StringArray rangeOptions;
+    rangeOptions.add("Start + Length (specify number of bytes)");
+    rangeOptions.add("Start + End (count from end of message)");
+    alertWindow->addComboBox("rangeType", rangeOptions, "Range Method:");
+    alertWindow->getComboBoxComponent("rangeType")->setSelectedItemIndex(0); // Default to start+length
+
+    // Add text editors for range parameters
     alertWindow->addTextEditor("start", "5", "Start Byte Index:");
-    alertWindow->addTextEditor("length", "5", "Number of Bytes:");
+    alertWindow->addTextEditor("param2", "5", "Length / End Offset:");
 
     // Add radio buttons for checksum type
     juce::StringArray checksumOptions;
@@ -106,18 +111,22 @@ void MainComponent::showSysExInputDialog()
     {
         juce::String sysexString = alertWindow->getTextEditorContents("sysex");
         juce::String startStr = alertWindow->getTextEditorContents("start");
-        juce::String lengthStr = alertWindow->getTextEditorContents("length");
+        juce::String param2Str = alertWindow->getTextEditorContents("param2");
+        int rangeType = alertWindow->getComboBoxComponent("rangeType")->getSelectedItemIndex();
         int checksumType = alertWindow->getComboBoxComponent("checksumType")->getSelectedItemIndex();
 
         int startByte = startStr.getIntValue();
-        int numBytes = lengthStr.getIntValue();
+        int param2 = param2Str.getIntValue();
 
         // Calculate checksum using the Calculator class
         Calculator::ChecksumType type = (checksumType == 0) ? Calculator::ChecksumType::Additive : Calculator::ChecksumType::XOR;
-        auto result = calculator.calculateChecksum(sysexString.toStdString(), startByte, numBytes, type);
+        Calculator::RangeType rangeMethod = (rangeType == 0) ? Calculator::RangeType::StartLength : Calculator::RangeType::StartEnd;
+
+        auto result = calculator.calculateChecksum(sysexString.toStdString(), startByte, param2, type, rangeMethod);
 
         // Display result
         juce::String checksumTypeName = (checksumType == 0) ? "Additive (Roland)" : "XOR";
+        juce::String rangeMethodName = (rangeType == 0) ? "Start + Length" : "Start + End Offset";
         juce::String hexChecksum = "0x" + juce::String::toHexString(result.checksum).toUpperCase();
 
         // Update the prominent hex checksum label
@@ -126,8 +135,13 @@ void MainComponent::showSysExInputDialog()
         // Update detailed results
         juce::String resultText;
         resultText << "SysEx String: " << sysexString << "\n";
+        resultText << "Range Method: " << rangeMethodName << "\n";
         resultText << "Start Byte: " << startByte << "\n";
-        resultText << "Length: " << numBytes << "\n";
+        if (rangeType == 0)
+            resultText << "Length: " << param2 << "\n";
+        else
+            resultText << "End Offset: " << param2 << " (from end)\n";
+        resultText << "Bytes Processed: " << result.bytesProcessed << "\n";
         resultText << "Checksum Type: " << checksumTypeName << "\n";
         resultText << "Status: " << (result.success ? "Success" : "Error - " + juce::String(result.errorMessage)) << "\n";
 
