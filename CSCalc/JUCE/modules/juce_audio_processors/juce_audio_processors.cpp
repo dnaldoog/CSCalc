@@ -1,24 +1,33 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE library.
-   Copyright (c) 2020 - Raw Material Software Limited
+   This file is part of the JUCE framework.
+   Copyright (c) Raw Material Software Limited
 
-   JUCE is an open source library subject to commercial or open-source
+   JUCE is an open source framework subject to commercial or open source
    licensing.
 
-   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
-   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
+   By downloading, installing, or using the JUCE framework, or combining the
+   JUCE framework with any other source code, object code, content or any other
+   copyrightable work, you agree to the terms of the JUCE End User Licence
+   Agreement, and all incorporated terms including the JUCE Privacy Policy and
+   the JUCE Website Terms of Service, as applicable, which will bind you. If you
+   do not agree to the terms of these agreements, we will not license the JUCE
+   framework to you, and you must discontinue the installation or download
+   process and cease use of the JUCE framework.
 
-   End User License Agreement: www.juce.com/juce-6-licence
-   Privacy Policy: www.juce.com/juce-privacy-policy
+   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
+   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
+   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
 
-   Or: You may also use this code under the terms of the GPL v3 (see
-   www.gnu.org/licenses).
+   Or:
 
-   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
-   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
-   DISCLAIMED.
+   You may also use this code under the terms of the AGPLv3:
+   https://www.gnu.org/licenses/agpl-3.0.en.html
+
+   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
+   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
+   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -36,20 +45,16 @@
 #define JUCE_CORE_INCLUDE_OBJC_HELPERS 1
 #define JUCE_GUI_BASICS_INCLUDE_XHEADERS 1
 #define JUCE_GUI_BASICS_INCLUDE_SCOPED_THREAD_DPI_AWARENESS_SETTER 1
+#define JUCE_GRAPHICS_INCLUDE_COREGRAPHICS_HELPERS 1
 
 #include "juce_audio_processors.h"
 #include <juce_gui_extra/juce_gui_extra.h>
 
 //==============================================================================
-#if JUCE_MAC
- #if JUCE_SUPPORT_CARBON && (JUCE_PLUGINHOST_VST || JUCE_PLUGINHOST_AU)
-  #include <Carbon/Carbon.h>
-  #include <juce_gui_extra/native/juce_mac_CarbonViewWrapperComponent.h>
- #endif
-#endif
-
-#if (JUCE_PLUGINHOST_VST || JUCE_PLUGINHOST_VST3) && JUCE_LINUX
+#if (JUCE_PLUGINHOST_VST || JUCE_PLUGINHOST_VST3) && (JUCE_LINUX || JUCE_BSD)
+ JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wvariadic-macros")
  #include <X11/Xlib.h>
+ JUCE_END_IGNORE_WARNINGS_GCC_LIKE
  #include <X11/Xutil.h>
  #include <sys/utsname.h>
  #undef KeyPress
@@ -64,11 +69,10 @@
  #include <AudioUnit/AudioUnit.h>
 #endif
 
-//==============================================================================
 namespace juce
 {
 
-#if JUCE_PLUGINHOST_VST || (JUCE_PLUGINHOST_LADSPA && JUCE_LINUX)
+#if JUCE_PLUGINHOST_VST || (JUCE_PLUGINHOST_LADSPA && (JUCE_LINUX || JUCE_BSD))
 
 static bool arrayContainsPlugin (const OwnedArray<PluginDescription>& list,
                                  const PluginDescription& desc)
@@ -82,143 +86,93 @@ static bool arrayContainsPlugin (const OwnedArray<PluginDescription>& list,
 
 #endif
 
-#if JUCE_WINDOWS
+#if JUCE_MAC
 
 //==============================================================================
-class HWNDComponentWithParent  : public HWNDComponent,
-                                 private Timer
+/*  This is an NSViewComponent which holds a long-lived NSView which acts
+    as the parent view for plugin editors.
+
+    Note that this component does not auto-resize depending on the bounds
+    of the owned view. VST2 and VST3 plugins have dedicated interfaces to
+    request that the editor bounds are updated. We can call `setSize` on this
+    component from inside those dedicated callbacks.
+*/
+struct NSViewComponentWithParent : public NSViewComponent,
+                                   private AsyncUpdater
 {
-public:
-    HWNDComponentWithParent()
+    enum class WantsNudge { no, yes };
+
+    explicit NSViewComponentWithParent (WantsNudge shouldNudge)
+        : wantsNudge (shouldNudge)
     {
-        String className ("JUCE_");
-        className << String::toHexString (Time::getHighResolutionTicks());
-
-        HMODULE moduleHandle = (HMODULE) Process::getCurrentModuleInstanceHandle();
-
-        WNDCLASSEX wc = {};
-        wc.cbSize         = sizeof (wc);
-        wc.lpfnWndProc    = (WNDPROC) wndProc;
-        wc.cbWndExtra     = 4;
-        wc.hInstance      = moduleHandle;
-        wc.lpszClassName  = className.toWideCharPointer();
-
-        atom = RegisterClassEx (&wc);
-        jassert (atom != 0);
-
-        hwnd = CreateWindow (getClassNameFromAtom(), L"HWNDComponentWithParent",
-                             0, 0, 0, 0, 0,
-                             nullptr, nullptr, moduleHandle, nullptr);
-
-        jassert (hwnd != nullptr);
-
-        setHWND (hwnd);
-        startTimer (30);
+        auto* view = [[getViewClass().createInstance() init] autorelease];
+        object_setInstanceVariable (view, "owner", this);
+        setView (view);
     }
 
-    ~HWNDComponentWithParent() override
-    {
-        if (IsWindow (hwnd))
-            DestroyWindow (hwnd);
+    explicit NSViewComponentWithParent (AudioPluginInstance& instance)
+        : NSViewComponentWithParent (getWantsNudge (instance)) {}
 
-        UnregisterClass (getClassNameFromAtom(), nullptr);
+    ~NSViewComponentWithParent() override
+    {
+        if (auto* view = static_cast<NSView*> (getView()))
+            object_setInstanceVariable (view, "owner", nullptr);
+
+        cancelPendingUpdate();
     }
+
+    JUCE_DECLARE_NON_COPYABLE (NSViewComponentWithParent)
+    JUCE_DECLARE_NON_MOVEABLE (NSViewComponentWithParent)
 
 private:
-    //==============================================================================
-    static LRESULT CALLBACK wndProc (HWND h, const UINT message, const WPARAM wParam, const LPARAM lParam)
-    {
-        if (message == WM_SHOWWINDOW && wParam == TRUE)
-            return 0;
+    WantsNudge wantsNudge = WantsNudge::no;
 
-        return DefWindowProc (h, message, wParam, lParam);
+    static WantsNudge getWantsNudge (AudioPluginInstance& instance)
+    {
+        PluginDescription pd;
+        instance.fillInPluginDescription (pd);
+        return pd.manufacturerName == "FabFilter" ? WantsNudge::yes : WantsNudge::no;
     }
 
-    void timerCallback() override
+    void handleAsyncUpdate() override
     {
-        if (HWND child = getChildHWND())
+        if (auto* peer = getTopLevelComponent()->getPeer())
         {
-            stopTimer();
-
-            ShowWindow (child, SW_HIDE);
-            SetParent (child, NULL);
-
-            auto windowFlags = GetWindowLongPtr (child, -16);
-
-            windowFlags &= ~WS_CHILD;
-            windowFlags |= WS_POPUP;
-
-            SetWindowLongPtr (child, -16, windowFlags);
-
-            setHWND (child);
+            auto* view = static_cast<NSView*> (getView());
+            const auto newArea = peer->getAreaCoveredBy (*this);
+            [view setFrame: makeCGRect (newArea.withHeight (newArea.getHeight() + 1))];
+            [view setFrame: makeCGRect (newArea)];
         }
     }
 
-    LPCTSTR getClassNameFromAtom() noexcept  { return (LPCTSTR) (pointer_sized_uint) atom; }
-
-    HWND getChildHWND() const
+    struct InnerNSView final : public ObjCClass<NSView>
     {
-        if (HWND parent = (HWND) getHWND())
-            return GetWindow (parent, GW_CHILD);
-
-        return nullptr;
-    }
-
-    //==============================================================================
-    ATOM atom;
-    HWND hwnd;
-
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HWNDComponentWithParent)
-};
-
-#elif JUCE_MAC || JUCE_IOS
-
-#if JUCE_IOS
- #define JUCE_IOS_MAC_VIEW  UIView
- using ViewComponentBaseClass = UIViewComponent;
-#else
- #define JUCE_IOS_MAC_VIEW  NSView
- using ViewComponentBaseClass = NSViewComponent;
-#endif
-
-//==============================================================================
-struct AutoResizingNSViewComponent  : public ViewComponentBaseClass,
-                                      private AsyncUpdater
-{
-    void childBoundsChanged (Component*) override  { triggerAsyncUpdate(); }
-    void handleAsyncUpdate() override              { resizeToFitView(); }
-};
-
-//==============================================================================
-struct AutoResizingNSViewComponentWithParent  : public AutoResizingNSViewComponent,
-                                                private Timer
-{
-    AutoResizingNSViewComponentWithParent()
-    {
-        JUCE_IOS_MAC_VIEW* v = [[JUCE_IOS_MAC_VIEW alloc] init];
-        setView (v);
-        [v release];
-
-        startTimer (30);
-    }
-
-    JUCE_IOS_MAC_VIEW* getChildView() const
-    {
-        if (JUCE_IOS_MAC_VIEW* parent = (JUCE_IOS_MAC_VIEW*) getView())
-            if ([[parent subviews] count] > 0)
-                return [[parent subviews] objectAtIndex: 0];
-
-        return nil;
-    }
-
-    void timerCallback() override
-    {
-        if (JUCE_IOS_MAC_VIEW* child = getChildView())
+        InnerNSView()
+            : ObjCClass ("JuceInnerNSView_")
         {
-            stopTimer();
-            setView (child);
+            addIvar<NSViewComponentWithParent*> ("owner");
+
+            addMethod (@selector (isOpaque), [] (id, SEL) { return YES; });
+
+            addMethod (@selector (didAddSubview:), [] (id self, SEL, NSView*)
+            {
+                if (auto* owner = getIvar<NSViewComponentWithParent*> (self, "owner"))
+                    if (owner->wantsNudge == WantsNudge::yes)
+                        owner->triggerAsyncUpdate();
+            });
+
+            JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wundeclared-selector")
+            addMethod (@selector (clipsToBounds), [] (id, SEL) { return YES; });
+            JUCE_END_IGNORE_WARNINGS_GCC_LIKE
+
+            registerClass();
         }
+    };
+
+    static InnerNSView& getViewClass()
+    {
+        static InnerNSView result;
+        return result;
     }
 };
 
@@ -226,6 +180,7 @@ struct AutoResizingNSViewComponentWithParent  : public AutoResizingNSViewCompone
 
 } // namespace juce
 
+#include "utilities/juce_FlagCache.h"
 #include "format/juce_AudioPluginFormat.cpp"
 #include "format/juce_AudioPluginFormatManager.cpp"
 #include "format_types/juce_LegacyAudioParameter.cpp"
@@ -235,10 +190,12 @@ struct AutoResizingNSViewComponentWithParent  : public AutoResizingNSViewCompone
 #include "processors/juce_AudioProcessorGraph.cpp"
 #include "processors/juce_GenericAudioProcessorEditor.cpp"
 #include "processors/juce_PluginDescription.cpp"
+#include "format_types/juce_ARACommon.cpp"
 #include "format_types/juce_LADSPAPluginFormat.cpp"
 #include "format_types/juce_VSTPluginFormat.cpp"
 #include "format_types/juce_VST3PluginFormat.cpp"
 #include "format_types/juce_AudioUnitPluginFormat.mm"
+#include "format_types/juce_ARAHosting.cpp"
 #include "scanning/juce_KnownPluginList.cpp"
 #include "scanning/juce_PluginDirectoryScanner.cpp"
 #include "scanning/juce_PluginListComponent.cpp"
@@ -252,3 +209,19 @@ struct AutoResizingNSViewComponentWithParent  : public AutoResizingNSViewCompone
 #include "utilities/juce_ParameterAttachments.cpp"
 #include "utilities/juce_AudioProcessorValueTreeState.cpp"
 #include "utilities/juce_PluginHostType.cpp"
+#include "utilities/juce_AAXClientExtensions.cpp"
+#include "utilities/juce_VST2ClientExtensions.cpp"
+#include "utilities/juce_VST3ClientExtensions.cpp"
+#include "utilities/ARA/juce_ARA_utils.cpp"
+
+#include "format_types/juce_LV2PluginFormat.cpp"
+
+#if JUCE_UNIT_TESTS
+ #if JUCE_PLUGINHOST_VST3
+  #include "format_types/juce_VST3PluginFormat_test.cpp"
+ #endif
+
+ #if JUCE_PLUGINHOST_LV2 && (! (JUCE_ANDROID || JUCE_IOS))
+  #include "format_types/juce_LV2PluginFormat_test.cpp"
+ #endif
+#endif

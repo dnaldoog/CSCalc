@@ -133,22 +133,40 @@ void MainComponent::showSysExInputDialog()
         juce::MemoryBlock hexData;
         hexData.loadFromHexString(sysexString);
 
-        // Create new MemoryBlock and copy the range
-        juce::MemoryBlock extractedRange;
-        extractedRange.copyFrom(static_cast<const uint8_t*>(hexData.getData()) + startByte, 0, param2);
+        DBG("Original hex data size: " << hexData.getSize());
+        DBG("Start byte: " << startByte << ", Length/End Offset: " << param2);
 
-        // Convert to hex string manually
-        juce::String extractedText;
-        for (size_t i = 0; i < extractedRange.getSize(); ++i)
+        // Calculate the actual length based on range type
+        int actualLength;
+        if (rangeType == 0) // Start + End Offset
         {
-            if (i > 0) extractedText += " ";
-            extractedText += juce::String::toHexString((int)static_cast<const uint8_t*>(extractedRange.getData())[i]).paddedLeft('0', 2);
+            actualLength = hexData.getSize() - startByte - param2;
         }
-        
-        // Update detailed results
+        else // Start + Length
+        {
+            actualLength = param2;
+        }
+
+        DBG("Calculated actual length: " << actualLength);
+
+        // Direct memory copy approach
+        juce::MemoryBlock xr;
+        xr.setSize(actualLength);
+        memcpy(xr.getData(), static_cast<const uint8_t*>(hexData.getData()) + startByte, actualLength);
+
+        // Convert to hex string with spaces
+        juce::String parsedString;
+        for (size_t i = 0; i < xr.getSize(); ++i)
+        {
+            if (i > 0) parsedString += " ";
+            parsedString += juce::String::toHexString((int)static_cast<const uint8_t*>(xr.getData())[i]).paddedLeft('0', 2);
+        }
+
+        DBG("Extracted data size: " << xr.getSize());
+        DBG("Parsed string: " << parsedString);
         juce::String resultText;
         resultText << "SysEx String: " << sysexString << "\n";
-        resultText << "Parsed String: " << extractedRange.toHexString(1) << "\n";
+        resultText << "Parsed String: " << parsedString << "\n";
         resultText << "Range Method: " << rangeMethodName << "\n";
         resultText << "Start Byte: " << startByte << "\n";
         if (rangeType == 0)
