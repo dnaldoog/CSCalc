@@ -1,23 +1,19 @@
-/*
-  ==============================================================================
-
-    Calculator.cpp
-    Created: 4 Aug 2025 11:16:21am
-    Author:  zan64
-
-  ==============================================================================
-*/
-
 #include "Calculator.h"
 #include <sstream>
 #include <algorithm>
 #include <cctype>
 
-Calculator::~Calculator()
+Calculator::Calculator()
 {
+    // Constructor - nothing specific to initialize for this class
 }
 
-ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int startByte, int numBytes)
+Calculator::~Calculator()
+{
+    // Destructor - nothing specific to clean up
+}
+
+ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int startByte, int numBytes, ChecksumType type)
 {
     ChecksumResult result;
     result.checksum = 0;
@@ -46,17 +42,30 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         return result;
     }
 
-    // Calculate checksum (sum of bytes)
-    int sum = 0;
-    for (int i = startByte; i < startByte + numBytes; ++i)
+    // Calculate checksum based on type
+    if (type == ChecksumType::Additive)
     {
-        sum += bytes[i];
+        // Roland-style additive checksum
+        int sum = 0;
+        for (int i = startByte; i < startByte + numBytes; ++i)
+        {
+            sum += bytes[i];
+        }
+        // Roland-style checksum: take lower 7 bits and compute 2's complement
+        result.checksum = (128 - (sum % 128)) % 128;
+    }
+    else if (type == ChecksumType::XOR)
+    {
+        // XOR checksum
+        int xorResult = 0;
+        for (int i = startByte; i < startByte + numBytes; ++i)
+        {
+            xorResult ^= bytes[i];
+        }
+        result.checksum = xorResult;
     }
 
-    // Roland-style checksum: take lower 7 bits and compute 2's complement
-    result.checksum = (128 - (sum % 128)) % 128;
     result.success = true;
-
     return result;
 }
 

@@ -9,8 +9,8 @@
       <FILE id="oqVYre" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
     </GROUP>
-    <FILE id="kP3oZo" name="Calculator.cpp" compile="1" resource="0" file="Source/Calculator.cpp"/>
-    <FILE id="UtFA8C" name="Calculator.h" compile="0" resource="0" file="Source/Calculator.h"/>
+    <FILE id="reKrtw" name="Calculator.cpp" compile="1" resource="0" file="Source/Calculator.cpp"/>
+    <FILE id="oWvcv8" name="Calculator.h" compile="0" resource="0" file="Source/Calculator.h"/>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
   <EXPORTFORMATS>

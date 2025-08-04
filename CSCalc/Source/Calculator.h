@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    Calculator.h
-    Created: 4 Aug 2025 11:16:21am
-    Author:  zan64
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <string>
@@ -23,11 +13,17 @@ struct ChecksumResult
 class Calculator
 {
 public:
+    enum class ChecksumType
+    {
+        Additive,
+        XOR
+    };
+
     Calculator();
     ~Calculator();
 
     // Calculate checksum for a hex string starting at startByte for numBytes
-    ChecksumResult calculateChecksum(const std::string& hexString, int startByte, int numBytes);
+    ChecksumResult calculateChecksum(const std::string& hexString, int startByte, int numBytes, ChecksumType type = ChecksumType::Additive);
 
 private:
     // Helper function to parse hex string into bytes

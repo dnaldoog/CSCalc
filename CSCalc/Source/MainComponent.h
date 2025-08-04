@@ -20,6 +20,8 @@ private:
     juce::TextButton openDialogButton;
     juce::TextEditor resultDisplay;
     juce::Label resultLabel;
+    juce::Label checksumLabel;
+    juce::Label checksumValueLabel;
 
     Calculator calculator;
 
