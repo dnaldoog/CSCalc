@@ -130,6 +130,8 @@ void MainComponent::showSysExInputDialog()
         juce::String checksumTypeName = (checksumType == 0) ? "Additive (Roland/Yamaha)" : "XOR";
         juce::String rangeMethodName = (rangeType == 0) ? "Start + End Offset" : "Start + Length" ;
         juce::String hexChecksum = "0x" + juce::String::toHexString(result.checksum).toUpperCase();
+        juce::String intChecksum = juce::String(result.checksum);
+		checksumValueLabel.setText(hexChecksum, juce::dontSendNotification);
         juce::MemoryBlock hexData;
         hexData.loadFromHexString(sysexString);
 
@@ -176,7 +178,8 @@ void MainComponent::showSysExInputDialog()
 
         resultText << "Bytes Processed: " << result.bytesProcessed << "\n";
         resultText << "Checksum Type: " << checksumTypeName << "\n";
-        resultText << "Status: " << (result.success ? "Success" : "Error - " + juce::String(result.errorMessage)) << "\n";
+        resultText << "Checksum: " << hexChecksum << " : [" << intChecksum << "]\n";
+        //resultText << "Status: " << (result.success ? "Success" : "Error - " + juce::String(result.errorMessage)) << "\n";
 
         resultDisplay.setText(resultText);
     }
