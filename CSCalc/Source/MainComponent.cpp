@@ -60,7 +60,7 @@ MainComponent::~MainComponent()
 
 void MainComponent::loadSettings()
 {
-    lastSysExString = settingsFile->getValue("sysexString", "");
+    lastSysExString = settingsFile->getValue("sysexString", "f0 41 10 57 12 03 00 01 10 31 3b f7");
     lastStartByte = settingsFile->getIntValue("startByte", 5);
     lastParam2 = settingsFile->getIntValue("param2", 2);
     lastRangeType = settingsFile->getIntValue("rangeType", 0);
@@ -78,6 +78,53 @@ void MainComponent::saveSettings()
         settingsFile->setValue("checksumType", lastChecksumType);
         settingsFile->saveIfNeeded();
     }
+}
+
+juce::String MainComponent::preprocessSysExString(const juce::String& input)
+{
+    juce::StringArray tokens;
+    tokens.addTokens(input, " ", "");
+
+    juce::String processed;
+
+    for (int i = 0; i < tokens.size(); ++i)
+    {
+        if (i > 0) processed += " ";
+
+        juce::String token = tokens[i].trim().toLowerCase();
+
+        // Check if token is valid hex (1-2 characters, only 0-9, a-f)
+        bool isValidHex = true;
+        if (token.length() == 0 || token.length() > 2)
+        {
+            isValidHex = false;
+        }
+        else
+        {
+            for (int j = 0; j < token.length(); ++j)
+            {
+                char c = token[j];
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+                {
+                    isValidHex = false;
+                    break;
+                }
+            }
+        }
+
+        if (isValidHex)
+        {
+            // Valid hex token - pad to 2 characters if needed
+            processed += token.paddedLeft('0', 2);
+        }
+        else
+        {
+            // Non-hex token (like xx, e14, etc.) - replace with 00
+            processed += "00";
+        }
+    }
+
+    return processed;
 }
 
 void MainComponent::paint(juce::Graphics& g)
@@ -218,21 +265,24 @@ void MainComponent::showSysExInputDialog()
         int rangeType = alertWindow->getComboBoxComponent("rangeType")->getSelectedItemIndex();
         int checksumType = alertWindow->getComboBoxComponent("checksumType")->getSelectedItemIndex();
 
-        // Save the current values for next time
+        // Save the current values for next time (save original with tokens)
         lastSysExString = sysexString;
         lastStartByte = startStr.getIntValue();
         lastParam2 = param2Str.getIntValue();
         lastRangeType = rangeType;
         lastChecksumType = checksumType;
 
+        // Preprocess the SysEx string to handle tokens
+        juce::String processedSysExString = preprocessSysExString(sysexString);
+
         int startByte = startStr.getIntValue();
         int param2 = param2Str.getIntValue();
 
-        // Calculate checksum using the Calculator class
+        // Calculate checksum using the Calculator class with processed string
         Calculator::ChecksumType type = (checksumType == 0) ? Calculator::ChecksumType::Additive : Calculator::ChecksumType::XOR;
         Calculator::RangeType rangeMethod = (rangeType == 0) ? Calculator::RangeType::StartEnd : Calculator::RangeType::StartLength;
 
-        auto calcResult = calculator.calculateChecksum(sysexString.toStdString(), startByte, param2, type, rangeMethod);
+        auto calcResult = calculator.calculateChecksum(processedSysExString.toStdString(), startByte, param2, type, rangeMethod);
 
         // Display result
         juce::String checksumTypeName = (checksumType == 0) ? "Additive (Roland/Yamaha)" : "XOR";
@@ -242,7 +292,12 @@ void MainComponent::showSysExInputDialog()
         checksumValueLabel.setText(hexChecksum, juce::dontSendNotification);
 
         juce::MemoryBlock hexData;
-        hexData.loadFromHexString(sysexString);
+        hexData.loadFromHexString(processedSysExString);
+
+        DBG("Original SysEx string: " << sysexString);
+        DBG("Processed SysEx string: " << processedSysExString);
+        DBG("Original hex data size: " << hexData.getSize());
+        DBG("Start byte: " << startByte << ", Length/End Offset: " << param2);
 
         // Calculate the actual length based on range type
         int actualLength;
@@ -254,6 +309,8 @@ void MainComponent::showSysExInputDialog()
         {
             actualLength = param2;
         }
+
+        DBG("Calculated actual length: " << actualLength);
 
         // Direct memory copy approach
         juce::MemoryBlock xr;
@@ -272,7 +329,8 @@ void MainComponent::showSysExInputDialog()
         DBG("Parsed string: " << parsedString);
 
         juce::String resultText;
-        resultText << "SysEx String: " << sysexString << "\n";
+        resultText << "Original SysEx: " << sysexString << "\n";
+        resultText << "Processed SysEx: " << processedSysExString << "\n";
         resultText << "Parsed String: " << parsedString << "\n";
         resultText << "Range Method: " << rangeMethodName << "\n";
         resultText << "Start Byte: " << startByte << "\n";

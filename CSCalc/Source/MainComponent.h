@@ -12,7 +12,7 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void buttonClicked(juce::Button* button) override;
-
+    juce::String MainComponent::preprocessSysExString(const juce::String& input);
 private:
     void showSysExInputDialog();
     void loadSettings();
