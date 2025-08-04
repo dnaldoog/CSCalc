@@ -85,18 +85,19 @@ void MainComponent::showSysExInputDialog()
 
     // Add radio buttons for range specification method
     juce::StringArray rangeOptions;
-    rangeOptions.add("Start + Length (specify number of bytes)");
     rangeOptions.add("Start + End (count from end of message)");
+    rangeOptions.add("Start + Length (specify number of bytes)");
+
     alertWindow->addComboBox("rangeType", rangeOptions, "Range Method:");
     alertWindow->getComboBoxComponent("rangeType")->setSelectedItemIndex(0); // Default to start+length
 
     // Add text editors for range parameters
     alertWindow->addTextEditor("start", "5", "Start Byte Index:");
-    alertWindow->addTextEditor("param2", "5", "Length / End Offset:");
+    alertWindow->addTextEditor("param2", "2", "Length / End Offset:");
 
     // Add radio buttons for checksum type
     juce::StringArray checksumOptions;
-    checksumOptions.add("Additive Checksum (Roland style)");
+    checksumOptions.add("Additive Checksum (Roland/Yamaha style)");
     checksumOptions.add("XOR Checksum");
     alertWindow->addComboBox("checksumType", checksumOptions, "Checksum Type:");
     alertWindow->getComboBoxComponent("checksumType")->setSelectedItemIndex(0); // Default to additive
@@ -120,12 +121,12 @@ void MainComponent::showSysExInputDialog()
 
         // Calculate checksum using the Calculator class
         Calculator::ChecksumType type = (checksumType == 0) ? Calculator::ChecksumType::Additive : Calculator::ChecksumType::XOR;
-        Calculator::RangeType rangeMethod = (rangeType == 0) ? Calculator::RangeType::StartLength : Calculator::RangeType::StartEnd;
+        Calculator::RangeType rangeMethod = (rangeType == 0) ? Calculator::RangeType::StartEnd : Calculator::RangeType::StartLength;
 
         auto result = calculator.calculateChecksum(sysexString.toStdString(), startByte, param2, type, rangeMethod);
 
         // Display result
-        juce::String checksumTypeName = (checksumType == 0) ? "Additive (Roland)" : "XOR";
+        juce::String checksumTypeName = (checksumType == 0) ? "Additive (Roland/Yamaha)" : "XOR";
         juce::String rangeMethodName = (rangeType == 0) ? "Start + Length" : "Start + End Offset";
         juce::String hexChecksum = "0x" + juce::String::toHexString(result.checksum).toUpperCase();
 
