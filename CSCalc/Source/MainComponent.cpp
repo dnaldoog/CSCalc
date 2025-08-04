@@ -29,7 +29,7 @@ MainComponent::MainComponent()
 
     // Setup result display
     resultLabel.setText("Calculation Details:", juce::dontSendNotification);
-    resultLabel.attachToComponent(&resultDisplay, true);
+    resultLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(resultLabel);
 
     resultDisplay.setMultiLine(true);
@@ -40,7 +40,7 @@ MainComponent::MainComponent()
 
     // Setup checksum display
     checksumLabel.setText("Checksum (Hex):", juce::dontSendNotification);
-    checksumLabel.attachToComponent(&checksumValueLabel, true);
+    checksumLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(checksumLabel);
 
     checksumValueLabel.setText("--", juce::dontSendNotification);
@@ -109,16 +109,25 @@ void MainComponent::resized()
 
     bounds.removeFromTop(20); // Spacing
 
-    // Checksum display area
-    auto checksumArea = bounds.removeFromTop(60);
-    checksumArea.removeFromLeft(150); // Space for label
-    checksumValueLabel.setBounds(checksumArea);
+    // Checksum display area - center aligned vertically
+    auto checksumArea = bounds.removeFromTop(80);
+    int checksumValueWidth = 200;
+    int checksumStartX = (checksumArea.getWidth() - checksumValueWidth) / 2;
+
+    // Label directly above the value
+    checksumLabel.setBounds(checksumStartX, checksumArea.getY(), checksumValueWidth, 20);
+    checksumValueLabel.setBounds(checksumStartX, checksumArea.getY() + 25, checksumValueWidth, 50);
+
     bounds.removeFromTop(10); // Spacing
 
-    // Result details area
-    auto resultArea = bounds.removeFromTop(200);
-    resultArea.removeFromLeft(150); // Space for label
-    resultDisplay.setBounds(resultArea);
+    // Result details area - center aligned vertically
+    auto resultArea = bounds;
+    int resultDisplayWidth = 400;
+    int resultStartX = (resultArea.getWidth() - resultDisplayWidth) / 2;
+
+    // Label directly above the text editor
+    resultLabel.setBounds(resultStartX, resultArea.getY(), resultDisplayWidth, 20);
+    resultDisplay.setBounds(resultStartX, resultArea.getY() + 25, resultDisplayWidth, resultArea.getHeight() - 25);
 }
 
 void MainComponent::buttonClicked(juce::Button* button)
