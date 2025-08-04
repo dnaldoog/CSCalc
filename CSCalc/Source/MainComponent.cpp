@@ -14,7 +14,8 @@ MainComponent::MainComponent()
 
     resultDisplay.setMultiLine(true);
     resultDisplay.setReadOnly(true);
-    resultDisplay.setColour(juce::TextEditor::backgroundColourId, juce::Colours::lightgrey);
+    resultDisplay.setColour(juce::TextEditor::textColourId, juce::Colours::black);
+    resultDisplay.setColour(juce::TextEditor::backgroundColourId, juce::Colour::fromString("ff99ccff"));
     addAndMakeVisible(resultDisplay);
 
     // Setup checksum display
@@ -127,21 +128,34 @@ void MainComponent::showSysExInputDialog()
 
         // Display result
         juce::String checksumTypeName = (checksumType == 0) ? "Additive (Roland/Yamaha)" : "XOR";
-        juce::String rangeMethodName = (rangeType == 0) ? "Start + Length" : "Start + End Offset";
+        juce::String rangeMethodName = (rangeType == 0) ? "Start + End Offset" : "Start + Length" ;
         juce::String hexChecksum = "0x" + juce::String::toHexString(result.checksum).toUpperCase();
+        juce::MemoryBlock hexData;
+        hexData.loadFromHexString(sysexString);
 
-        // Update the prominent hex checksum label
-        checksumValueLabel.setText(hexChecksum, juce::dontSendNotification);
+        // Create new MemoryBlock and copy the range
+        juce::MemoryBlock extractedRange;
+        extractedRange.copyFrom(static_cast<const uint8_t*>(hexData.getData()) + startByte, 0, param2);
 
+        // Convert to hex string manually
+        juce::String extractedText;
+        for (size_t i = 0; i < extractedRange.getSize(); ++i)
+        {
+            if (i > 0) extractedText += " ";
+            extractedText += juce::String::toHexString((int)static_cast<const uint8_t*>(extractedRange.getData())[i]).paddedLeft('0', 2);
+        }
+        
         // Update detailed results
         juce::String resultText;
         resultText << "SysEx String: " << sysexString << "\n";
+        resultText << "Parsed String: " << extractedRange.toHexString(1) << "\n";
         resultText << "Range Method: " << rangeMethodName << "\n";
         resultText << "Start Byte: " << startByte << "\n";
         if (rangeType == 0)
-            resultText << "Length: " << param2 << "\n";
+            resultText << "End Offset: " << param2 << " (bytes from end)\n";
         else
-            resultText << "End Offset: " << param2 << " (from end)\n";
+            resultText << "Length: " << param2 << "\n";
+
         resultText << "Bytes Processed: " << result.bytesProcessed << "\n";
         resultText << "Checksum Type: " << checksumTypeName << "\n";
         resultText << "Status: " << (result.success ? "Success" : "Error - " + juce::String(result.errorMessage)) << "\n";

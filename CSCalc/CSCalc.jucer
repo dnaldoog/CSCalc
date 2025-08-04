@@ -11,10 +11,11 @@
     </GROUP>
     <FILE id="reKrtw" name="Calculator.cpp" compile="1" resource="0" file="Source/Calculator.cpp"/>
     <FILE id="oWvcv8" name="Calculator.h" compile="0" resource="0" file="Source/Calculator.h"/>
+    <FILE id="br5PTd" name="icon.png" compile="0" resource="1" file="../../../Pictures/icon.png"/>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
   <EXPORTFORMATS>
-    <VS2022 targetFolder="Builds/VisualStudio2022">
+    <VS2022 targetFolder="Builds/VisualStudio2022" smallIcon="br5PTd" bigIcon="br5PTd">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug" targetName="CSCalc"/>
         <CONFIGURATION isDebug="0" name="Release" targetName="CSCalc"/>
