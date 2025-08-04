@@ -242,7 +242,18 @@ void MainComponent::showSysExInputDialog()
 
     // Add text editors for range parameters - use saved values
     alertWindow->addTextEditor("start", juce::String(lastStartByte), "Start Byte Index:");
-    alertWindow->addTextEditor("param2", juce::String(lastParam2), "Length / End Offset:");
+
+    // Set the param2 label based on whether we have saved state
+    juce::String param2Label;
+    if (lastSysExString.isEmpty()) // First time or after clear - no saved state
+    {
+        param2Label = "Length / End Offset:";
+    }
+    else // Have saved state - use specific label based on range type
+    {
+        param2Label = (lastRangeType == 0) ? "End Offset:" : "Message Length:";
+    }
+    alertWindow->addTextEditor("param2", juce::String(lastParam2), param2Label);
 
     // Add radio buttons for checksum type
     juce::StringArray checksumOptions;
