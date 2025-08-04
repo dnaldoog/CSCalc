@@ -60,7 +60,7 @@ MainComponent::~MainComponent()
 
 void MainComponent::loadSettings()
 {
-    lastSysExString = settingsFile->getValue("sysexString", "f0 41 10 57 12 03 00 01 10 31 3b f7");
+    lastSysExString = settingsFile->getValue("sysexString", "");
     lastStartByte = settingsFile->getIntValue("startByte", 5);
     lastParam2 = settingsFile->getIntValue("param2", 2);
     lastRangeType = settingsFile->getIntValue("rangeType", 0);
@@ -244,9 +244,6 @@ void MainComponent::showSysExInputDialog()
         juce::MemoryBlock hexData;
         hexData.loadFromHexString(sysexString);
 
-        DBG("Original hex data size: " << hexData.getSize());
-        DBG("Start byte: " << startByte << ", Length/End Offset: " << param2);
-
         // Calculate the actual length based on range type
         int actualLength;
         if (rangeType == 0) // Start + End Offset
@@ -257,8 +254,6 @@ void MainComponent::showSysExInputDialog()
         {
             actualLength = param2;
         }
-
-        DBG("Calculated actual length: " << actualLength);
 
         // Direct memory copy approach
         juce::MemoryBlock xr;
