@@ -60,7 +60,7 @@ MainComponent::~MainComponent()
 
 void MainComponent::loadSettings()
 {
-    lastSysExString = settingsFile->getValue("sysexString", "f0 41 10 57 12 03 00 01 10 31 3b f7");
+    lastSysExString = settingsFile->getValue("sysexString", "");
     lastStartByte = settingsFile->getIntValue("startByte", 5);
     lastParam2 = settingsFile->getIntValue("param2", 2);
     lastRangeType = settingsFile->getIntValue("rangeType", 0);
