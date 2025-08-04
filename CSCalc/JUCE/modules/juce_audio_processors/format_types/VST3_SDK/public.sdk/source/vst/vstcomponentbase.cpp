@@ -8,7 +8,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2024, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2019, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -36,7 +36,6 @@
 
 #include "vstcomponentbase.h"
 #include "base/source/fstring.h"
-#include "pluginterfaces/base/funknownimpl.h"
 
 namespace Steinberg {
 namespace Vst {
@@ -44,7 +43,7 @@ namespace Vst {
 //------------------------------------------------------------------------
 // ComponentBase Implementation
 //------------------------------------------------------------------------
-ComponentBase::ComponentBase ()
+ComponentBase::ComponentBase () : hostContext (nullptr), peerConnection (nullptr)
 {
 }
 
@@ -61,6 +60,8 @@ tresult PLUGIN_API ComponentBase::initialize (FUnknown* context)
 		return kResultFalse;
 
 	hostContext = context;
+	if (hostContext)
+		hostContext->addRef ();
 
 	return kResultOk;
 }
@@ -69,13 +70,18 @@ tresult PLUGIN_API ComponentBase::initialize (FUnknown* context)
 tresult PLUGIN_API ComponentBase::terminate ()
 {
 	// release host interfaces
-	hostContext = nullptr;
+	if (hostContext)
+	{
+		hostContext->release ();
+		hostContext = nullptr;
+	}
 
 	// in case host did not disconnect us,
 	// release peer now
 	if (peerConnection)
 	{
 		peerConnection->disconnect (this);
+		peerConnection->release ();
 		peerConnection = nullptr;
 	}
 
@@ -93,6 +99,7 @@ tresult PLUGIN_API ComponentBase::connect (IConnectionPoint* other)
 		return kResultFalse;
 
 	peerConnection = other;
+	peerConnection->addRef ();
 	return kResultOk;
 }
 
@@ -101,6 +108,7 @@ tresult PLUGIN_API ComponentBase::disconnect (IConnectionPoint* other)
 {
 	if (peerConnection && other == peerConnection)
 	{
+		peerConnection->release ();
 		peerConnection = nullptr;
 		return kResultOk;
 	}
@@ -113,10 +121,11 @@ tresult PLUGIN_API ComponentBase::notify (IMessage* message)
 	if (!message)
 		return kInvalidArgument;
 
-	if (FIDStringsEqual (message->getMessageID (), "TextMessage"))
+	if (!strcmp (message->getMessageID (), "TextMessage"))
 	{
 		TChar string[256] = {0};
-		if (message->getAttributes ()->getString ("Text", string, sizeof (string)) == kResultOk)
+		if (message->getAttributes ()->getString ("Text", string,
+		                                          sizeof (string) / sizeof (char16)) == kResultOk)
 		{
 			String tmp (string);
 			tmp.toMultiByte (kCP_Utf8);
@@ -128,15 +137,16 @@ tresult PLUGIN_API ComponentBase::notify (IMessage* message)
 }
 
 //------------------------------------------------------------------------
-IMessage* ComponentBase::allocateMessage () const
+IMessage* ComponentBase::allocateMessage ()
 {
-	if (auto hostApp = U::cast<IHostApplication> (hostContext))
+	FUnknownPtr<IHostApplication> hostApp (hostContext);
+	if (hostApp)
 		return Vst::allocateMessage (hostApp);
 	return nullptr;
 }
 
 //------------------------------------------------------------------------
-tresult ComponentBase::sendMessage (IMessage* message) const
+tresult ComponentBase::sendMessage (IMessage* message)
 {
 	if (message != nullptr && getPeer () != nullptr)
 		return getPeer ()->notify (message);
@@ -144,29 +154,19 @@ tresult ComponentBase::sendMessage (IMessage* message) const
 }
 
 //------------------------------------------------------------------------
-tresult ComponentBase::sendTextMessage (const char8* text) const
+tresult ComponentBase::sendTextMessage (const char8* text)
 {
-	if (auto msg = owned (allocateMessage ()))
-	{
-		msg->setMessageID ("TextMessage");
-		String tmp (text, kCP_Utf8);
-		if (tmp.length () >= 256)
-			tmp.remove (255);
-		msg->getAttributes ()->setString ("Text", tmp.text16 ());
-		return sendMessage (msg);
-	}
-	return kResultFalse;
-}
+	IMessage* message = allocateMessage ();
+	if (!message)
+		return kResultFalse;
 
-//------------------------------------------------------------------------
-tresult ComponentBase::sendMessageID (const char8* messageID) const
-{
-	if (auto msg = owned (allocateMessage ()))
-	{
-		msg->setMessageID (messageID);
-		return sendMessage (msg);
-	}
-	return kResultFalse;
+	FReleaser msgReleaser (message);
+	message->setMessageID ("TextMessage");
+	String tmp (text, kCP_Utf8);
+	if (tmp.length () >= 256)
+		tmp.remove (255);
+	message->getAttributes ()->setString ("Text", tmp.text16 ());
+	return sendMessage (message);
 }
 
 //------------------------------------------------------------------------

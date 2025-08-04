@@ -8,7 +8,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2024, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2019, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -49,8 +49,8 @@ namespace Vst {
 
 //------------------------------------------------------------------------
 /** Description of a Parameter.
-\ingroup vstClasses
-*/
+\ingroup vstClasses */
+//------------------------------------------------------------------------
 class Parameter : public FObject
 {
 public:
@@ -98,15 +98,15 @@ public:
 	OBJ_METHODS (Parameter, FObject)
 //------------------------------------------------------------------------
 protected:
-	ParameterInfo info {};
-	ParamValue valueNormalized {0.};
-	int32 precision {4};
+	ParameterInfo info;
+	ParamValue valueNormalized;
+	int32 precision;
 };
 
 //------------------------------------------------------------------------
 /** Description of a RangeParameter.
-\ingroup vstClasses 
-*/
+\ingroup vstClasses */
+//------------------------------------------------------------------------
 class RangeParameter : public Parameter
 {
 public:
@@ -148,8 +148,8 @@ protected:
 
 //------------------------------------------------------------------------
 /** Description of a StringListParameter.
-\ingroup vstClasses
-*/
+\ingroup vstClasses */
+//------------------------------------------------------------------------
 class StringListParameter : public Parameter
 {
 public:
@@ -184,8 +184,8 @@ protected:
 
 //------------------------------------------------------------------------
 /** Collection of parameters.
-\ingroup vstClasses
-*/
+\ingroup vstClasses */
+//------------------------------------------------------------------------
 class ParameterContainer
 {
 public:
@@ -212,7 +212,7 @@ public:
 	int32 getParameterCount () const { return params ? static_cast<int32> (params->size ()) : 0; }
 
 	/** Gets parameter by index. */
-	Parameter* getParameterByIndex (int32 index) const;
+	Parameter* getParameterByIndex (int32 index) { return params ? params->at (index) : nullptr; }
 
 	/** Removes all parameters. */
 	void removeAll ()
@@ -223,15 +223,13 @@ public:
 	}
 
 	/** Gets parameter by ID. */
-	Parameter* getParameter (ParamID tag) const;
+	Parameter* getParameter (ParamID tag);
 
-	/** Remove a specific parameter by ID. */
-	bool removeParameter (ParamID tag);
-	//------------------------------------------------------------------------
+//------------------------------------------------------------------------
 protected:
 	using ParameterPtrVector = std::vector<IPtr<Parameter>>;
 	using IndexMap = std::map<ParamID, ParameterPtrVector::size_type>;
-	ParameterPtrVector* params {nullptr};
+	ParameterPtrVector* params;
 	IndexMap id2index;
 };
 

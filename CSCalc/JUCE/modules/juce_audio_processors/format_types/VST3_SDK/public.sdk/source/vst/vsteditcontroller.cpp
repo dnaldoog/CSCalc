@@ -8,7 +8,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2024, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2019, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -36,10 +36,9 @@
 
 #include "public.sdk/source/vst/vsteditcontroller.h"
 #include "base/source/updatehandler.h"
-#include "pluginterfaces/base/funknownimpl.h"
 #include "pluginterfaces/base/ustring.h"
 
-#include <cstdio>
+#include <stdio.h>
 
 namespace Steinberg {
 namespace Vst {
@@ -49,7 +48,7 @@ KnobMode EditController::hostKnobMode = kCircularMode;
 //------------------------------------------------------------------------
 // EditController Implementation
 //------------------------------------------------------------------------
-EditController::EditController ()
+EditController::EditController () : componentHandler (nullptr), componentHandler2 (nullptr)
 {
 }
 
@@ -64,8 +63,17 @@ tresult PLUGIN_API EditController::terminate ()
 {
 	parameters.removeAll ();
 
-	componentHandler.reset ();
-	componentHandler2.reset ();
+	if (componentHandler)
+	{
+		componentHandler->release ();
+		componentHandler = nullptr;
+	}
+
+	if (componentHandler2)
+	{
+		componentHandler2->release ();
+		componentHandler2 = nullptr;
+	}
 
 	return ComponentBase::terminate ();
 }
@@ -97,7 +105,8 @@ int32 PLUGIN_API EditController::getParameterCount ()
 //------------------------------------------------------------------------
 tresult PLUGIN_API EditController::getParameterInfo (int32 paramIndex, ParameterInfo& info)
 {
-	if (Parameter* parameter = parameters.getParameterByIndex (paramIndex))
+	Parameter* parameter = parameters.getParameterByIndex (paramIndex);
+	if (parameter)
 	{
 		info = parameter->getInfo ();
 		return kResultTrue;
@@ -109,7 +118,8 @@ tresult PLUGIN_API EditController::getParameterInfo (int32 paramIndex, Parameter
 tresult PLUGIN_API EditController::getParamStringByValue (ParamID tag, ParamValue valueNormalized,
                                                           String128 string)
 {
-	if (Parameter* parameter = getParameterObject (tag))
+	Parameter* parameter = getParameterObject (tag);
+	if (parameter)
 	{
 		parameter->toString (valueNormalized, string);
 		return kResultTrue;
@@ -121,7 +131,8 @@ tresult PLUGIN_API EditController::getParamStringByValue (ParamID tag, ParamValu
 tresult PLUGIN_API EditController::getParamValueByString (ParamID tag, TChar* string,
                                                           ParamValue& valueNormalized)
 {
-	if (Parameter* parameter = getParameterObject (tag))
+	Parameter* parameter = getParameterObject (tag);
+	if (parameter)
 	{
 		if (parameter->fromString (string, valueNormalized))
 		{
@@ -135,7 +146,8 @@ tresult PLUGIN_API EditController::getParamValueByString (ParamID tag, TChar* st
 ParamValue PLUGIN_API EditController::normalizedParamToPlain (ParamID tag,
                                                               ParamValue valueNormalized)
 {
-	if (Parameter* parameter = getParameterObject (tag))
+	Parameter* parameter = getParameterObject (tag);
+	if (parameter)
 	{
 		return parameter->toPlain (valueNormalized);
 	}
@@ -145,7 +157,8 @@ ParamValue PLUGIN_API EditController::normalizedParamToPlain (ParamID tag,
 //------------------------------------------------------------------------
 ParamValue PLUGIN_API EditController::plainParamToNormalized (ParamID tag, ParamValue plainValue)
 {
-	if (Parameter* parameter = getParameterObject (tag))
+	Parameter* parameter = getParameterObject (tag);
+	if (parameter)
 	{
 		return parameter->toNormalized (plainValue);
 	}
@@ -155,7 +168,8 @@ ParamValue PLUGIN_API EditController::plainParamToNormalized (ParamID tag, Param
 //------------------------------------------------------------------------
 ParamValue PLUGIN_API EditController::getParamNormalized (ParamID tag)
 {
-	if (Parameter* parameter = getParameterObject (tag))
+	Parameter* parameter = getParameterObject (tag);
+	if (parameter)
 	{
 		return parameter->getNormalized ();
 	}
@@ -165,7 +179,8 @@ ParamValue PLUGIN_API EditController::getParamNormalized (ParamID tag)
 //------------------------------------------------------------------------
 tresult PLUGIN_API EditController::setParamNormalized (ParamID tag, ParamValue value)
 {
-	if (Parameter* parameter = getParameterObject (tag))
+	Parameter* parameter = getParameterObject (tag);
+	if (parameter)
 	{
 		parameter->setNormalized (value);
 		return kResultTrue;
@@ -181,11 +196,25 @@ tresult PLUGIN_API EditController::setComponentHandler (IComponentHandler* newHa
 		return kResultTrue;
 	}
 
-	componentHandler = newHandler;
-	componentHandler2.reset ();
+	if (componentHandler)
+	{
+		componentHandler->release ();
+	}
 
-    // try to get the extended version
-    if (newHandler)
+	componentHandler = newHandler;
+	if (componentHandler)
+	{
+		componentHandler->addRef ();
+	}
+
+	// try to get the extended version
+	if (componentHandler2)
+	{
+		componentHandler2->release ();
+		componentHandler2 = nullptr;
+	}
+
+	if (newHandler)
 	{
 		newHandler->queryInterface (IComponentHandler2::iid, (void**)&componentHandler2);
 	}
@@ -245,7 +274,8 @@ tresult EditController::finishGroupEdit ()
 //------------------------------------------------------------------------
 tresult EditController::getParameterInfoByTag (ParamID tag, ParameterInfo& info)
 {
-	if (Parameter* parameter = getParameterObject (tag))
+	Parameter* parameter = getParameterObject (tag);
+	if (parameter)
 	{
 		info = parameter->getInfo ();
 		return kResultTrue;
@@ -273,13 +303,16 @@ tresult EditController::requestOpenEditor (FIDString name)
 	return kNotImplemented;
 }
 
-#ifndef NO_PLUGUI
 //------------------------------------------------------------------------
 // EditorView Implementation
 //------------------------------------------------------------------------
-EditorView::EditorView (EditController* _controller, ViewRect* size)
-: CPluginView (size), controller (_controller)
+EditorView::EditorView (EditController* controller, ViewRect* size)
+: CPluginView (size), controller (controller)
 {
+	if (controller)
+	{
+		controller->addRef ();
+	}
 }
 
 //------------------------------------------------------------------------
@@ -288,7 +321,7 @@ EditorView::~EditorView ()
 	if (controller)
 	{
 		controller->editorDestroyed (this);
-		controller = nullptr;
+		controller->release ();
 	}
 }
 
@@ -309,12 +342,11 @@ void EditorView::removedFromParent ()
 		controller->editorRemoved (this);
 	}
 }
-#endif // NO_PLUGUI
 
 //------------------------------------------------------------------------
 // EditControllerEx1 implementation
 //------------------------------------------------------------------------
-EditControllerEx1::EditControllerEx1 ()
+EditControllerEx1::EditControllerEx1 () : selectedUnit (kRootUnitId)
 {
 	UpdateHandler::instance ();
 }
@@ -322,37 +354,26 @@ EditControllerEx1::EditControllerEx1 ()
 //------------------------------------------------------------------------
 EditControllerEx1::~EditControllerEx1 ()
 {
-}
-
-//------------------------------------------------------------------------
-tresult PLUGIN_API EditControllerEx1::terminate ()
-{
-	units.clear ();
-
-	for (const auto& programList : programLists)
+	for (ProgramListVector::const_iterator it = programLists.begin (), end = programLists.end ();
+	     it != end; ++it)
 	{
-		if (programList)
-			programList->removeDependent (this);
+		if (*it)
+			(*it)->removeDependent (this);
 	}
-	programLists.clear ();
-	programIndexMap.clear ();
-
-	return EditController::terminate ();
 }
 
 //------------------------------------------------------------------------
 bool EditControllerEx1::addUnit (Unit* unit)
 {
-	units.emplace_back (unit, false);
+	units.push_back (IPtr<Unit> (unit, false));
 	return true;
 }
 
 //------------------------------------------------------------------------
 tresult PLUGIN_API EditControllerEx1::getUnitInfo (int32 unitIndex, UnitInfo& info /*out*/)
 {
-	if (unitIndex < 0 || unitIndex >= static_cast<int32> (units.size ()))
-		return kResultFalse;
-	if (Unit* unit = units.at (unitIndex))
+	Unit* unit = units.at (unitIndex);
+	if (unit)
 	{
 		info = unit->getInfo ();
 		return kResultTrue;
@@ -364,7 +385,8 @@ tresult PLUGIN_API EditControllerEx1::getUnitInfo (int32 unitIndex, UnitInfo& in
 tresult EditControllerEx1::notifyUnitSelection ()
 {
 	tresult result = kResultFalse;
-	if (auto unitHandler = U::cast<IUnitHandler> (componentHandler))
+	FUnknownPtr<IUnitHandler> unitHandler (componentHandler);
+	if (unitHandler)
 		result = unitHandler->notifyUnitSelection (selectedUnit);
 	return result;
 }
@@ -373,7 +395,7 @@ tresult EditControllerEx1::notifyUnitSelection ()
 bool EditControllerEx1::addProgramList (ProgramList* list)
 {
 	programIndexMap[list->getID ()] = programLists.size ();
-	programLists.emplace_back (list, false);
+	programLists.push_back (IPtr<ProgramList> (list, false));
 	list->addDependent (this);
 	return true;
 }
@@ -389,7 +411,8 @@ ProgramList* EditControllerEx1::getProgramList (ProgramListID listId) const
 tresult EditControllerEx1::notifyProgramListChange (ProgramListID listId, int32 programIndex)
 {
 	tresult result = kResultFalse;
-	if (auto unitHandler = U::cast<IUnitHandler> (componentHandler))
+	FUnknownPtr<IUnitHandler> unitHandler (componentHandler);
+	if (unitHandler)
 		result = unitHandler->notifyProgramListChange (listId, programIndex);
 	return result;
 }
@@ -477,7 +500,8 @@ void PLUGIN_API EditControllerEx1::update (FUnknown* changedUnknown, int32 /*mes
 	auto* programList = FCast<ProgramList> (changedUnknown);
 	if (programList)
 	{
-		if (auto unitHandler = U::cast<IUnitHandler> (componentHandler))
+		FUnknownPtr<IUnitHandler> unitHandler (componentHandler);
+		if (unitHandler)
 			unitHandler->notifyProgramListChange (programList->getID (), kAllProgramInvalid);
 	}
 }
@@ -534,8 +558,8 @@ ProgramList::ProgramList (const ProgramList& programList)
 int32 ProgramList::addProgram (const String128 name)
 {
 	++info.programCount;
-	programNames.emplace_back (name);
-	programInfos.emplace_back ();
+	programNames.push_back (name);
+	programInfos.push_back (ProgramInfoVector::value_type ());
 	return static_cast<int32> (programNames.size ()) - 1;
 }
 
@@ -559,10 +583,9 @@ tresult ProgramList::getProgramInfo (int32 programIndex, CString attributeId,
 		StringMap::const_iterator it = programInfos[programIndex].find (attributeId);
 		if (it != programInfos[programIndex].end ())
 		{
-			if (!it->second.empty ())
+			if (!it->second.isEmpty ())
 			{
-				memset (value, 0, sizeof (String128));
-				it->second.copy (value, 128);
+				it->second.copyTo16 (value, 0, 128);
 				return kResultTrue;
 			}
 		}
@@ -575,8 +598,7 @@ tresult ProgramList::getProgramName (int32 programIndex, String128 name /*out*/)
 {
 	if (programIndex >= 0 && programIndex < static_cast<int32> (programNames.size ()))
 	{
-		memset (name, 0, sizeof (String128));
-		programNames.at (programIndex).copy (name, 128);
+		programNames.at (programIndex).copyTo16 (name, 0, 128);
 		return kResultTrue;
 	}
 	return kResultFalse;
@@ -603,12 +625,13 @@ Parameter* ProgramList::getParameter ()
 	if (parameter == nullptr)
 	{
 		auto* listParameter = new StringListParameter (
-			info.name, info.id, nullptr,
-			ParameterInfo::kCanAutomate | ParameterInfo::kIsList | ParameterInfo::kIsProgramChange,
-			unitId);
-		for (const auto& programName : programNames)
+		    info.name, info.id, nullptr,
+		    ParameterInfo::kCanAutomate | ParameterInfo::kIsList | ParameterInfo::kIsProgramChange,
+		    unitId);
+		for (StringVector::const_iterator it = programNames.begin (), end = programNames.end ();
+		     it != end; ++it)
 		{
-			listParameter->appendString (programName.data ());
+			listParameter->appendString (*it);
 		}
 		parameter = listParameter;
 	}
@@ -629,7 +652,7 @@ int32 ProgramListWithPitchNames::addProgram (const String128 name)
 {
 	int32 index = ProgramList::addProgram (name);
 	if (index >= 0)
-		pitchNames.emplace_back ();
+		pitchNames.push_back (PitchNamesVector::value_type ());
 	return index;
 }
 
@@ -673,7 +696,7 @@ bool ProgramListWithPitchNames::removePitchName (int32 programIndex, int16 pitch
 tresult ProgramListWithPitchNames::hasPitchNames (int32 programIndex)
 {
 	if (programIndex >= 0 && programIndex < getCount ())
-		return (pitchNames.at (programIndex).empty () == true) ? kResultFalse : kResultTrue;
+		return pitchNames.at (programIndex).empty () ? kResultFalse : kResultTrue;
 	return kResultFalse;
 }
 
@@ -686,8 +709,7 @@ tresult ProgramListWithPitchNames::getPitchName (int32 programIndex, int16 midiP
 		PitchNameMap::const_iterator it = pitchNames[programIndex].find (midiPitch);
 		if (it != pitchNames[programIndex].end ())
 		{
-			memset (name, 0, sizeof (String128));
-			it->second.copy (name, 128);
+			it->second.copyTo16 (name, 0, 128);
 			return kResultTrue;
 		}
 	}

@@ -1,47 +1,30 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
+   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+   End User License Agreement: www.juce.com/juce-6-licence
+   Privacy Policy: www.juce.com/juce-privacy-policy
 
-   Or:
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
 
 namespace juce
 {
-
-static double getStepSize (const Slider& slider)
-{
-    const auto interval = slider.getInterval();
-
-    return ! approximatelyEqual (interval, 0.0) ? interval
-                                                : slider.getRange().getLength() * 0.01;
-}
 
 class Slider::Pimpl   : public AsyncUpdater, // this needs to be public otherwise it will cause an
                                              // error when JUCE_DLL_BUILD=1
@@ -131,34 +114,20 @@ public:
         return 0.0f;
     }
 
-    void setNumDecimalPlacesToDisplay (int decimalPlacesToDisplay)
-    {
-        fixedNumDecimalPlaces = jmax (0, decimalPlacesToDisplay);
-        numDecimalPlaces = fixedNumDecimalPlaces;
-    }
-
-    int getNumDecimalPlacesToDisplay() const
-    {
-        return fixedNumDecimalPlaces == -1 ? numDecimalPlaces : fixedNumDecimalPlaces;
-    }
-
     void updateRange()
     {
-        if (fixedNumDecimalPlaces == -1)
+        // figure out the number of DPs needed to display all values at this
+        // interval setting.
+        numDecimalPlaces = 7;
+
+        if (normRange.interval != 0.0)
         {
-            // figure out the number of DPs needed to display all values at this
-            // interval setting.
-            numDecimalPlaces = 7;
+            int v = std::abs (roundToInt (normRange.interval * 10000000));
 
-            if (! approximatelyEqual (normRange.interval, 0.0))
+            while ((v % 10) == 0 && numDecimalPlaces > 0)
             {
-                int v = std::abs (roundToInt (normRange.interval * 10000000));
-
-                while ((v % 10) == 0 && numDecimalPlaces > 0)
-                {
-                    --numDecimalPlaces;
-                    v /= 10;
-                }
+                --numDecimalPlaces;
+                v /= 10;
             }
         }
 
@@ -215,24 +184,21 @@ public:
                                newValue);
         }
 
-        if (! approximatelyEqual (newValue, lastCurrentValue))
+        if (newValue != lastCurrentValue)
         {
             if (valueBox != nullptr)
                 valueBox->hideEditor (true);
 
             lastCurrentValue = newValue;
 
-            // Need to do this comparison because the Value will use equalsWithSameType to compare
-            // the new and old values, so will generate unwanted change events if the type changes.
-            // Cast to double before comparing, to prevent comparing as another type (e.g. String).
-            // We also want to avoid sending a notification if both new and old values are NaN.
-            const auto asDouble = static_cast<double> (currentValue.getValue());
-
-            if (! (approximatelyEqual (asDouble, newValue) || (std::isnan (asDouble) && std::isnan (newValue))))
+            // (need to do this comparison because the Value will use equalsWithSameType to compare
+            // the new and old values, so will generate unwanted change events if the type changes)
+            if (currentValue != newValue)
                 currentValue = newValue;
 
             updateText();
             owner.repaint();
+            updatePopupDisplay (newValue);
 
             triggerChangeMessage (notification);
         }
@@ -261,12 +227,12 @@ public:
             newValue = jmin (lastCurrentValue, newValue);
         }
 
-        if (! approximatelyEqual (lastValueMin, newValue))
+        if (lastValueMin != newValue)
         {
             lastValueMin = newValue;
             valueMin = newValue;
             owner.repaint();
-            updatePopupDisplay();
+            updatePopupDisplay (newValue);
 
             triggerChangeMessage (notification);
         }
@@ -295,12 +261,12 @@ public:
             newValue = jmax (lastCurrentValue, newValue);
         }
 
-        if (! approximatelyEqual (lastValueMax, newValue))
+        if (lastValueMax != newValue)
         {
             lastValueMax = newValue;
             valueMax = newValue;
             owner.repaint();
-            updatePopupDisplay();
+            updatePopupDisplay (valueMax.getValue());
 
             triggerChangeMessage (notification);
         }
@@ -318,7 +284,7 @@ public:
         newMinValue = constrainedValue (newMinValue);
         newMaxValue = constrainedValue (newMaxValue);
 
-        if (! approximatelyEqual (lastValueMax, newMaxValue) || ! approximatelyEqual (lastValueMin, newMinValue))
+        if (lastValueMax != newMaxValue || lastValueMin != newMinValue)
         {
             lastValueMax = newMaxValue;
             lastValueMin = newMinValue;
@@ -371,13 +337,8 @@ public:
         if (checker.shouldBailOut())
             return;
 
-        NullCheckedInvocation::invoke (owner.onValueChange);
-
-        if (checker.shouldBailOut())
-            return;
-
-        if (auto* handler = owner.getAccessibilityHandler())
-            handler->notifyAccessibilityEvent (AccessibilityEvent::valueChanged);
+        if (owner.onValueChange != nullptr)
+            owner.onValueChange();
     }
 
     void sendDragStart()
@@ -390,7 +351,8 @@ public:
         if (checker.shouldBailOut())
             return;
 
-        NullCheckedInvocation::invoke (owner.onDragStart);
+        if (owner.onDragStart != nullptr)
+            owner.onDragStart();
     }
 
     void sendDragEnd()
@@ -404,8 +366,19 @@ public:
         if (checker.shouldBailOut())
             return;
 
-        NullCheckedInvocation::invoke (owner.onDragEnd);
+        if (owner.onDragEnd != nullptr)
+            owner.onDragEnd();
     }
+
+    struct DragInProgress
+    {
+        DragInProgress (Pimpl& p)  : owner (p)      { owner.sendDragStart(); }
+        ~DragInProgress()                           { owner.sendDragEnd(); }
+
+        Pimpl& owner;
+
+        JUCE_DECLARE_NON_COPYABLE (DragInProgress)
+    };
 
     void incrementOrDecrement (double delta)
     {
@@ -419,7 +392,7 @@ public:
             }
             else
             {
-                ScopedDragNotification drag (owner);
+                DragInProgress drag (*this);
                 setValue (newValue, sendNotificationSync);
             }
         }
@@ -433,22 +406,18 @@ public:
                 setValue (currentValue.getValue(), dontSendNotification);
         }
         else if (value.refersToSameSourceAs (valueMin))
-        {
             setMinValue (valueMin.getValue(), dontSendNotification, true);
-        }
         else if (value.refersToSameSourceAs (valueMax))
-        {
             setMaxValue (valueMax.getValue(), dontSendNotification, true);
-        }
     }
 
     void textChanged()
     {
         auto newValue = owner.snapValue (owner.getValueFromText (valueBox->getText()), notDragging);
 
-        if (! approximatelyEqual (newValue, static_cast<double> (currentValue.getValue())))
+        if (newValue != static_cast<double> (currentValue.getValue()))
         {
-            ScopedDragNotification drag (owner);
+            DragInProgress drag (*this);
             setValue (newValue, sendNotificationSync);
         }
 
@@ -464,8 +433,6 @@ public:
             if (newValue != valueBox->getText())
                 valueBox->setText (newValue, dontSendNotification);
         }
-
-        updatePopupDisplay();
     }
 
     double constrainedValue (double value) const
@@ -498,10 +465,8 @@ public:
         if (style != newStyle)
         {
             style = newStyle;
-
             owner.repaint();
             owner.lookAndFeelChanged();
-            owner.invalidateAccessibilityHandler();
         }
     }
 
@@ -623,24 +588,26 @@ public:
             incButton.reset (lf.createSliderButton (owner, true));
             decButton.reset (lf.createSliderButton (owner, false));
 
-            auto tooltip = owner.getTooltip();
+            owner.addAndMakeVisible (incButton.get());
+            owner.addAndMakeVisible (decButton.get());
 
-            auto setupButton = [&] (Button& b, bool isIncrement)
+            incButton->onClick = [this] { incrementOrDecrement (normRange.interval); };
+            decButton->onClick = [this] { incrementOrDecrement (-normRange.interval); };
+
+            if (incDecButtonMode != incDecButtonsNotDraggable)
             {
-                owner.addAndMakeVisible (b);
-                b.onClick = [this, isIncrement] { incrementOrDecrement (isIncrement ? normRange.interval : -normRange.interval); };
+                incButton->addMouseListener (&owner, false);
+                decButton->addMouseListener (&owner, false);
+            }
+            else
+            {
+                incButton->setRepeatSpeed (300, 100, 20);
+                decButton->setRepeatSpeed (300, 100, 20);
+            }
 
-                if (incDecButtonMode != incDecButtonsNotDraggable)
-                    b.addMouseListener (&owner, false);
-                else
-                    b.setRepeatSpeed (300, 100, 20);
-
-                b.setTooltip (tooltip);
-                b.setAccessible (false);
-            };
-
-            setupButton (*incButton, true);
-            setupButton (*decButton, false);
+            auto tooltip = owner.getTooltip();
+            incButton->setTooltip (tooltip);
+            decButton->setTooltip (tooltip);
         }
         else
         {
@@ -826,7 +793,7 @@ public:
         auto maxSpeed = jmax (200.0, (double) sliderRegionSize);
         auto speed = jlimit (0.0, maxSpeed, (double) std::abs (mouseDiff));
 
-        if (! approximatelyEqual (speed, 0.0))
+        if (speed != 0.0)
         {
             speed = 0.2 * velocityModeSensitivity
                       * (1.0 + std::sin (MathConstants<double>::pi * (1.5 + jmin (0.5, velocityModeOffset
@@ -897,7 +864,7 @@ public:
                         popupDisplay->stopTimer();
                 }
 
-                currentDrag = std::make_unique<ScopedDragNotification> (owner);
+                currentDrag.reset (new DragInProgress (*this));
                 mouseDrag (e);
             }
         }
@@ -979,7 +946,7 @@ public:
         {
             restoreMouseIfHidden();
 
-            if (sendChangeOnlyOnRelease && ! approximatelyEqual (valueOnMouseDown, static_cast<double> (currentValue.getValue())))
+            if (sendChangeOnlyOnRelease && valueOnMouseDown != static_cast<double> (currentValue.getValue()))
                 triggerChangeMessage (sendNotificationAsync);
 
             currentDrag.reset();
@@ -1026,38 +993,6 @@ public:
         popupDisplay.reset();
     }
 
-    bool keyPressed (const KeyPress& key)
-    {
-        if (key.getModifiers().isAnyModifierKeyDown())
-            return false;
-
-        const auto getInterval = [this]
-        {
-            if (auto* accessibility = owner.getAccessibilityHandler())
-                if (auto* valueInterface = accessibility->getValueInterface())
-                    return valueInterface->getRange().getInterval();
-
-            return getStepSize (owner);
-        };
-
-        const auto valueChange = [&]
-        {
-            if (key == KeyPress::rightKey || key == KeyPress::upKey)
-                return getInterval();
-
-            if (key == KeyPress::leftKey || key == KeyPress::downKey)
-                return -getInterval();
-
-            return 0.0;
-        }();
-
-        if (approximatelyEqual (valueChange, 0.0))
-            return false;
-
-        setValue (getValue() + valueChange, sendNotificationSync);
-        return true;
-    }
-
     void showPopupDisplay()
     {
         if (style == IncDecButtons)
@@ -1074,36 +1009,25 @@ public:
                                             | ComponentPeer::windowIgnoresKeyPresses
                                             | ComponentPeer::windowIgnoresMouseClicks);
 
-            updatePopupDisplay();
+            if (style == SliderStyle::TwoValueHorizontal
+                || style == SliderStyle::TwoValueVertical)
+            {
+                updatePopupDisplay (sliderBeingDragged == 2 ? getMaxValue()
+                                                            : getMinValue());
+            }
+            else
+            {
+                updatePopupDisplay (getValue());
+            }
+
             popupDisplay->setVisible (true);
         }
     }
 
-    void updatePopupDisplay()
+    void updatePopupDisplay (double valueToShow)
     {
-        if (popupDisplay == nullptr)
-            return;
-
-        const auto valueToShow = [this]
-        {
-            constexpr SliderStyle multiSliderStyles[] { SliderStyle::TwoValueHorizontal,
-                                                        SliderStyle::TwoValueVertical,
-                                                        SliderStyle::ThreeValueHorizontal,
-                                                        SliderStyle::ThreeValueVertical };
-
-            if (std::find (std::begin (multiSliderStyles), std::end (multiSliderStyles), style) == std::end (multiSliderStyles))
-                return getValue();
-
-            if (sliderBeingDragged == 2)
-                return getMaxValue();
-
-            if (sliderBeingDragged == 1)
-                return getMinValue();
-
-            return getValue();
-        }();
-
-        popupDisplay->updatePosition (owner.getTextFromValue (valueToShow));
+        if (popupDisplay != nullptr)
+            popupDisplay->updatePosition (owner.getTextFromValue (valueToShow));
     }
 
     bool canDoubleClickToValue() const
@@ -1118,7 +1042,7 @@ public:
     {
         if (canDoubleClickToValue())
         {
-            ScopedDragNotification drag (owner);
+            DragInProgress drag (*this);
             setValue (doubleClickReturnValue, sendNotificationSync);
         }
     }
@@ -1157,11 +1081,11 @@ public:
                     auto delta = getMouseWheelDelta (value, (std::abs (wheel.deltaX) > std::abs (wheel.deltaY)
                                                                   ? -wheel.deltaX : wheel.deltaY)
                                                                * (wheel.isReversed ? -1.0f : 1.0f));
-                    if (! approximatelyEqual (delta, 0.0))
+                    if (delta != 0.0)
                     {
                         auto newValue = value + jmax (normRange.interval, std::abs (delta)) * (delta < 0 ? -1.0 : 1.0);
 
-                        ScopedDragNotification drag (owner);
+                        DragInProgress drag (*this);
                         setValue (owner.snapValue (newValue, notDragging), sendNotificationSync);
                     }
                 }
@@ -1251,6 +1175,12 @@ public:
                                      getLinearSliderPos (lastValueMax),
                                      style, owner);
             }
+
+            if ((style == LinearBar || style == LinearBarVertical) && valueBox == nullptr)
+            {
+                g.setColour (owner.findColour (Slider::textBoxOutlineColourId));
+                g.drawRect (0, 0, owner.getWidth(), owner.getHeight(), 1);
+            }
         }
     }
 
@@ -1280,6 +1210,7 @@ public:
     }
 
     //==============================================================================
+
     void resizeIncDecButtons()
     {
         auto buttonRect = sliderRect;
@@ -1326,12 +1257,11 @@ public:
     int pixelsForFullDragExtent = 250;
     Time lastMouseWheelTime;
     Rectangle<int> sliderRect;
-    std::unique_ptr<ScopedDragNotification> currentDrag;
+    std::unique_ptr<DragInProgress> currentDrag;
 
     TextEntryBoxPosition textBoxPos;
     String textSuffix;
     int numDecimalPlaces = 7;
-    int fixedNumDecimalPlaces = -1;
     int textBoxWidth = 80, textBoxHeight = 20;
     IncDecButtonMode incDecButtonMode = incDecButtonsNotDraggable;
     ModifierKeys::Flags modifierToSwapModes = ModifierKeys::ctrlAltCommandModifiers;
@@ -1359,8 +1289,8 @@ public:
     std::unique_ptr<Button> incButton, decButton;
 
     //==============================================================================
-    struct PopupDisplayComponent final : public BubbleComponent,
-                                         public Timer
+    struct PopupDisplayComponent  : public BubbleComponent,
+                                    public Timer
     {
         PopupDisplayComponent (Slider& s, bool isOnDesktop)
             : owner (s),
@@ -1389,7 +1319,7 @@ public:
 
         void getContentSize (int& w, int& h) override
         {
-            w = GlyphArrangement::getStringWidthInt (font, text) + 18;
+            w = font.getStringWidth (text) + 18;
             h = (int) (font.getHeight() * 1.6f);
         }
 
@@ -1427,18 +1357,6 @@ public:
     }
 };
 
-//==============================================================================
-Slider::ScopedDragNotification::ScopedDragNotification (Slider& s)
-    : sliderBeingDragged (s)
-{
-    sliderBeingDragged.pimpl->sendDragStart();
-}
-
-Slider::ScopedDragNotification::~ScopedDragNotification()
-{
-    if (sliderBeingDragged.pimpl != nullptr)
-        sliderBeingDragged.pimpl->sendDragEnd();
-}
 
 //==============================================================================
 Slider::Slider()
@@ -1581,11 +1499,10 @@ void Slider::lookAndFeelChanged()   { pimpl->lookAndFeelChanged (getLookAndFeel(
 void Slider::enablementChanged()    { repaint(); pimpl->updateTextBoxEnablement(); }
 
 //==============================================================================
-NormalisableRange<double> Slider::getNormalisableRange() const noexcept { return pimpl->normRange; }
-Range<double> Slider::getRange() const noexcept                         { return { pimpl->normRange.start, pimpl->normRange.end }; }
-double Slider::getMaximum() const noexcept                              { return pimpl->normRange.end; }
-double Slider::getMinimum() const noexcept                              { return pimpl->normRange.start; }
-double Slider::getInterval() const noexcept                             { return pimpl->normRange.interval; }
+Range<double> Slider::getRange() const noexcept  { return { pimpl->normRange.start, pimpl->normRange.end }; }
+double Slider::getMaximum() const noexcept       { return pimpl->normRange.end; }
+double Slider::getMinimum() const noexcept       { return pimpl->normRange.start; }
+double Slider::getInterval() const noexcept      { return pimpl->normRange.interval; }
 
 void Slider::setRange (double newMin, double newMax, double newInt)      { pimpl->setRange (newMin, newMax, newInt); }
 void Slider::setRange (Range<double> newRange, double newInt)            { pimpl->setRange (newRange.getStart(), newRange.getEnd(), newInt); }
@@ -1692,14 +1609,11 @@ double Slider::snapValue (double attemptedValue, DragMode)
     return attemptedValue;
 }
 
-int Slider::getNumDecimalPlacesToDisplay() const noexcept
-{
-    return pimpl->getNumDecimalPlacesToDisplay();
-}
+int Slider::getNumDecimalPlacesToDisplay() const noexcept   { return pimpl->numDecimalPlaces; }
 
 void Slider::setNumDecimalPlacesToDisplay (int decimalPlacesToDisplay)
 {
-    pimpl->setNumDecimalPlacesToDisplay (decimalPlacesToDisplay);
+    pimpl->numDecimalPlaces = decimalPlacesToDisplay;
     updateText();
 }
 
@@ -1713,7 +1627,6 @@ void Slider::valueChanged() {}
 void Slider::setPopupMenuEnabled (bool menuEnabled)         { pimpl->menuEnabled = menuEnabled; }
 void Slider::setScrollWheelEnabled (bool enabled)           { pimpl->scrollWheelEnabled = enabled; }
 
-bool Slider::isScrollWheelEnabled() const noexcept          { return pimpl->scrollWheelEnabled; }
 bool Slider::isHorizontal() const noexcept                  { return pimpl->isHorizontal(); }
 bool Slider::isVertical() const noexcept                    { return pimpl->isVertical(); }
 bool Slider::isRotary() const noexcept                      { return pimpl->isRotary(); }
@@ -1738,9 +1651,6 @@ void Slider::mouseExit (const MouseEvent&)      { pimpl->mouseExit(); }
 // it is shown when dragging the mouse over a slider and releasing
 void Slider::mouseEnter (const MouseEvent&)     { pimpl->mouseMove(); }
 
-/** @internal */
-bool Slider::keyPressed (const KeyPress& k)     { return pimpl->keyPressed (k); }
-
 void Slider::modifierKeysChanged (const ModifierKeys& modifiers)
 {
     if (isEnabled())
@@ -1763,77 +1673,6 @@ void Slider::mouseWheelMove (const MouseEvent& e, const MouseWheelDetails& wheel
 {
     if (! (isEnabled() && pimpl->mouseWheelMove (e, wheel)))
         Component::mouseWheelMove (e, wheel);
-}
-
-//==============================================================================
-class SliderAccessibilityHandler final : public AccessibilityHandler
-{
-public:
-    explicit SliderAccessibilityHandler (Slider& sliderToWrap)
-        : AccessibilityHandler (sliderToWrap,
-                                AccessibilityRole::slider,
-                                AccessibilityActions{},
-                                AccessibilityHandler::Interfaces { std::make_unique<ValueInterface> (sliderToWrap) }),
-          slider (sliderToWrap)
-    {
-    }
-
-    String getHelp() const override   { return slider.getTooltip(); }
-
-private:
-    class ValueInterface final : public AccessibilityValueInterface
-    {
-    public:
-        explicit ValueInterface (Slider& sliderToWrap)
-            : slider (sliderToWrap),
-              useMaxValue (slider.isTwoValue())
-        {
-        }
-
-        bool isReadOnly() const override  { return false; }
-
-        double getCurrentValue() const override
-        {
-            return useMaxValue ? slider.getMaximum()
-                               : slider.getValue();
-        }
-
-        void setValue (double newValue) override
-        {
-            Slider::ScopedDragNotification drag (slider);
-
-            if (useMaxValue)
-                slider.setMaxValue (newValue, sendNotificationSync);
-            else
-                slider.setValue (newValue, sendNotificationSync);
-        }
-
-        String getCurrentValueAsString() const override          { return slider.getTextFromValue (getCurrentValue()); }
-        void setValueAsString (const String& newValue) override  { setValue (slider.getValueFromText (newValue)); }
-
-        AccessibleValueRange getRange() const override
-        {
-            return { { slider.getMinimum(), slider.getMaximum() },
-                     getStepSize (slider) };
-        }
-
-    private:
-        Slider& slider;
-        const bool useMaxValue;
-
-        //==============================================================================
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ValueInterface)
-    };
-
-    Slider& slider;
-
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SliderAccessibilityHandler)
-};
-
-std::unique_ptr<AccessibilityHandler> Slider::createAccessibilityHandler()
-{
-    return std::make_unique<SliderAccessibilityHandler> (*this);
 }
 
 } // namespace juce

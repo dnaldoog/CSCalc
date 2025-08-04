@@ -1,33 +1,24 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
+   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+   End User License Agreement: www.juce.com/juce-6-licence
+   Privacy Policy: www.juce.com/juce-privacy-policy
 
-   Or:
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -50,8 +41,8 @@ struct TextureInfo
 //==============================================================================
 // This list persists in the OpenGLContext, and will re-use cached textures which
 // are created from Images.
-struct CachedImageList final : public ReferenceCountedObject,
-                               private ImagePixelData::Listener
+struct CachedImageList  : public ReferenceCountedObject,
+                          private ImagePixelData::Listener
 {
     CachedImageList (OpenGLContext& c) noexcept
         : context (c), maxCacheSize (c.getImageCacheSize()) {}
@@ -73,7 +64,7 @@ struct CachedImageList final : public ReferenceCountedObject,
     TextureInfo getTextureFor (const Image& image)
     {
         auto pixelData = image.getPixelData();
-        auto* c = findCachedImage (pixelData.get());
+        auto* c = findCachedImage (pixelData);
 
         if (c == nullptr)
         {
@@ -89,7 +80,7 @@ struct CachedImageList final : public ReferenceCountedObject,
                 return t;
             }
 
-            c = images.add (new CachedImage (*this, pixelData.get()));
+            c = images.add (new CachedImage (*this, pixelData));
             totalSize += c->imageSize;
 
             while (totalSize > maxCacheSize && images.size() > 1 && totalSize > 0)
@@ -117,12 +108,9 @@ struct CachedImageList final : public ReferenceCountedObject,
 
         TextureInfo getTextureInfo()
         {
-            if (pixelData == nullptr)
-                return {};
-
             TextureInfo t;
 
-            if (textureNeedsReloading)
+            if (textureNeedsReloading && pixelData != nullptr)
             {
                 textureNeedsReloading = false;
                 texture.loadImage (Image (*pixelData));
@@ -171,7 +159,7 @@ private:
     {
         for (int i = images.size(); --i >= 0;)
         {
-            auto& ci = *images.getUnchecked (i);
+            auto& ci = *images.getUnchecked(i);
 
             if (ci.pixelData == im)
             {
@@ -216,6 +204,7 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CachedImageList)
 };
+
 
 //==============================================================================
 struct Target
@@ -356,9 +345,9 @@ private:
 };
 
 //==============================================================================
-struct ShaderPrograms final : public ReferenceCountedObject
+struct ShaderPrograms  : public ReferenceCountedObject
 {
-    explicit ShaderPrograms (OpenGLContext& context)
+    ShaderPrograms (OpenGLContext& context)
         : solidColourProgram (context),
           solidColourMasked (context),
           radialGradient (context),
@@ -412,13 +401,11 @@ struct ShaderPrograms final : public ReferenceCountedObject
             }
         }
 
-        virtual ~ShaderProgramHolder() = default;
-
         OpenGLShaderProgram program;
         String lastError;
     };
 
-    struct ShaderBase : public ShaderProgramHolder
+    struct ShaderBase   : public ShaderProgramHolder
     {
         ShaderBase (OpenGLContext& context, const char* fragmentShader, const char* vertexShader = nullptr)
             : ShaderProgramHolder (context, fragmentShader, vertexShader),
@@ -427,65 +414,29 @@ struct ShaderPrograms final : public ReferenceCountedObject
               screenBounds (program, "screenBounds")
         {}
 
-        Rectangle<float> get2DBounds() const
-        {
-            GLfloat params[4]{};
-            glGetUniformfv (program.getProgramID(), screenBounds.uniformID, params);
-            return { params[0], params[1], 2 * params[2], 2 * params[3] };
-        }
-
         void set2DBounds (Rectangle<float> bounds)
         {
             screenBounds.set (bounds.getX(), bounds.getY(), 0.5f * bounds.getWidth(), 0.5f * bounds.getHeight());
         }
 
-        void bindAttributes()
+        void bindAttributes (OpenGLContext& context)
         {
-            gl::glVertexAttribPointer ((GLuint) positionAttribute.attributeID, 2, GL_SHORT, GL_FALSE, 8, nullptr);
-            gl::glVertexAttribPointer ((GLuint) colourAttribute.attributeID, 4, GL_UNSIGNED_BYTE, GL_TRUE, 8, (void*) 4);
-            gl::glEnableVertexAttribArray ((GLuint) positionAttribute.attributeID);
-            gl::glEnableVertexAttribArray ((GLuint) colourAttribute.attributeID);
+            context.extensions.glVertexAttribPointer ((GLuint) positionAttribute.attributeID, 2, GL_SHORT, GL_FALSE, 8, nullptr);
+            context.extensions.glVertexAttribPointer ((GLuint) colourAttribute.attributeID, 4, GL_UNSIGNED_BYTE, GL_TRUE, 8, (void*) 4);
+            context.extensions.glEnableVertexAttribArray ((GLuint) positionAttribute.attributeID);
+            context.extensions.glEnableVertexAttribArray ((GLuint) colourAttribute.attributeID);
         }
 
-        void unbindAttributes()
+        void unbindAttributes (OpenGLContext& context)
         {
-            gl::glDisableVertexAttribArray ((GLuint) positionAttribute.attributeID);
-            gl::glDisableVertexAttribArray ((GLuint) colourAttribute.attributeID);
+            context.extensions.glDisableVertexAttribArray ((GLuint) positionAttribute.attributeID);
+            context.extensions.glDisableVertexAttribArray ((GLuint) colourAttribute.attributeID);
         }
 
         OpenGLShaderProgram::Attribute positionAttribute, colourAttribute;
         OpenGLShaderProgram::Uniform screenBounds;
         std::function<void (OpenGLShaderProgram&)> onShaderActivated;
     };
-
-    /*  If the shader currently bound to the active context is owned by ShaderPrograms, this returns
-        the specific shader that is currently bound, or nullptr if none of the shaders match.
-    */
-    ShaderBase* findActiveShader()
-    {
-        GLint program{};
-        glGetIntegerv (GL_CURRENT_PROGRAM, &program);
-
-        ShaderBase* ptrs[] { &solidColourProgram,
-                             &solidColourMasked,
-                             &radialGradient,
-                             &radialGradientMasked,
-                             &linearGradient1,
-                             &linearGradient1Masked,
-                             &linearGradient2,
-                             &linearGradient2Masked,
-                             &image,
-                             &imageMasked,
-                             &tiledImage,
-                             &tiledImageMasked,
-                             &copyTexture,
-                             &maskTexture };
-
-        const auto iter = std::find_if (std::begin (ptrs),
-                                        std::end (ptrs),
-                                        [&] (auto* x) { return (GLint) x->program.getProgramID() == program; });
-        return iter != std::end (ptrs) ? *iter : nullptr;
-    }
 
     struct MaskedShaderParams
     {
@@ -509,7 +460,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
     #define JUCE_DECLARE_VARYING_COLOUR   "varying " JUCE_MEDIUMP " vec4 frontColour;"
     #define JUCE_DECLARE_VARYING_PIXELPOS "varying " JUCE_HIGHP " vec2 pixelPos;"
 
-    struct SolidColourProgram final : public ShaderBase
+    struct SolidColourProgram  : public ShaderBase
     {
         SolidColourProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_VARYING_COLOUR
@@ -523,7 +474,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
                                               "1.0 - (pixelPos.y - float (maskBounds.y)) / float (maskBounds.w))"
     #define JUCE_GET_MASK_ALPHA         "texture2D (maskTexture, " JUCE_FRAGCOORD_TO_MASK_POS ").a"
 
-    struct SolidColourMaskedProgram final : public ShaderBase
+    struct SolidColourMaskedProgram  : public ShaderBase
     {
         SolidColourMaskedProgram (OpenGLContext& context)
             : ShaderBase (context,
@@ -563,7 +514,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
                                           " + vec2 (matrix[2], matrix[5]))"
     #define JUCE_GET_TEXTURE_COLOUR       "(frontColour.a * texture2D (gradientTexture, vec2 (gradientPos, 0.5)))"
 
-    struct RadialGradientProgram final : public ShaderBase
+    struct RadialGradientProgram  : public ShaderBase
     {
         RadialGradientProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_VARYING_PIXELPOS
@@ -579,7 +530,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
         RadialGradientParams gradientParams;
     };
 
-    struct RadialGradientMaskedProgram final : public ShaderBase
+    struct RadialGradientMaskedProgram  : public ShaderBase
     {
         RadialGradientMaskedProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_VARYING_PIXELPOS
@@ -615,7 +566,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
     #define JUCE_CALC_LINEAR_GRAD_POS1    JUCE_MEDIUMP " float gradientPos = (pixelPos.y - (gradientInfo.y + (gradientInfo.z * (pixelPos.x - gradientInfo.x)))) / gradientInfo.w;"
     #define JUCE_CALC_LINEAR_GRAD_POS2    JUCE_MEDIUMP " float gradientPos = (pixelPos.x - (gradientInfo.x + (gradientInfo.z * (pixelPos.y - gradientInfo.y)))) / gradientInfo.w;"
 
-    struct LinearGradient1Program final : public ShaderBase
+    struct LinearGradient1Program  : public ShaderBase
     {
         LinearGradient1Program (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_LINEAR_UNIFORMS  // gradientInfo: x = x1, y = y1, z = (y2 - y1) / (x2 - x1), w = length
@@ -630,7 +581,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
         LinearGradientParams gradientParams;
     };
 
-    struct LinearGradient1MaskedProgram final : public ShaderBase
+    struct LinearGradient1MaskedProgram  : public ShaderBase
     {
         LinearGradient1MaskedProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_LINEAR_UNIFORMS  // gradientInfo: x = x1, y = y1, z = (y2 - y1) / (x2 - x1), w = length
@@ -648,7 +599,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
         MaskedShaderParams maskParams;
     };
 
-    struct LinearGradient2Program final : public ShaderBase
+    struct LinearGradient2Program  : public ShaderBase
     {
         LinearGradient2Program (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_LINEAR_UNIFORMS  // gradientInfo: x = x1, y = y1, z = (x2 - x1) / (y2 - y1), y = y1, w = length
@@ -663,7 +614,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
         LinearGradientParams gradientParams;
     };
 
-    struct LinearGradient2MaskedProgram final : public ShaderBase
+    struct LinearGradient2MaskedProgram  : public ShaderBase
     {
         LinearGradient2MaskedProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_LINEAR_UNIFORMS  // gradientInfo: x = x1, y = y1, z = (x2 - x1) / (y2 - y1), y = y1, w = length
@@ -729,7 +680,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
     #define JUCE_CLAMP_TEXTURE_COORD    JUCE_HIGHP " vec2 texturePos = clamp (" JUCE_MATRIX_TIMES_FRAGCOORD ", vec2 (0, 0), imageLimits);"
     #define JUCE_MOD_TEXTURE_COORD      JUCE_HIGHP " vec2 texturePos = mod (" JUCE_MATRIX_TIMES_FRAGCOORD ", imageLimits);"
 
-    struct ImageProgram final : public ShaderBase
+    struct ImageProgram  : public ShaderBase
     {
         ImageProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_VARYING_COLOUR
@@ -761,7 +712,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
         ImageParams imageParams;
     };
 
-    struct ImageMaskedProgram final : public ShaderBase
+    struct ImageMaskedProgram  : public ShaderBase
     {
         ImageMaskedProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_IMAGE_UNIFORMS JUCE_DECLARE_MASK_UNIFORMS
@@ -778,7 +729,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
         MaskedShaderParams maskParams;
     };
 
-    struct TiledImageProgram final : public ShaderBase
+    struct TiledImageProgram  : public ShaderBase
     {
         TiledImageProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_IMAGE_UNIFORMS
@@ -793,7 +744,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
         ImageParams imageParams;
     };
 
-    struct TiledImageMaskedProgram final : public ShaderBase
+    struct TiledImageMaskedProgram  : public ShaderBase
     {
         TiledImageMaskedProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_IMAGE_UNIFORMS JUCE_DECLARE_MASK_UNIFORMS
@@ -810,7 +761,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
         MaskedShaderParams maskParams;
     };
 
-    struct CopyTextureProgram final : public ShaderBase
+    struct CopyTextureProgram  : public ShaderBase
     {
         CopyTextureProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_IMAGE_UNIFORMS
@@ -825,7 +776,7 @@ struct ShaderPrograms final : public ReferenceCountedObject
         ImageParams imageParams;
     };
 
-    struct MaskTextureProgram final : public ShaderBase
+    struct MaskTextureProgram  : public ShaderBase
     {
         MaskTextureProgram (OpenGLContext& context)
             : ShaderBase (context, JUCE_DECLARE_IMAGE_UNIFORMS
@@ -861,114 +812,6 @@ struct ShaderPrograms final : public ReferenceCountedObject
     TiledImageMaskedProgram tiledImageMasked;
     CopyTextureProgram copyTexture;
     MaskTextureProgram maskTexture;
-};
-
-//==============================================================================
-struct TraitsVAO
-{
-    static bool isCoreProfile()
-    {
-       #if JUCE_OPENGL_ES
-        return true;
-       #else
-        clearGLError();
-        GLint mask = 0;
-        glGetIntegerv (GL_CONTEXT_PROFILE_MASK, &mask);
-
-        // The context isn't aware of the profile mask, so it pre-dates the core profile
-        if (glGetError() == GL_INVALID_ENUM)
-            return false;
-
-        // Also assumes a compatibility profile if the mask is completely empty for some reason
-        return (mask & (GLint) GL_CONTEXT_CORE_PROFILE_BIT) != 0;
-       #endif
-    }
-
-    /*  Returns true if the context requires a non-zero vertex array object (VAO) to be bound.
-
-        If the context is a compatibility context, we can just pretend that VAOs don't exist,
-        and use the default VAO all the time instead. This provides a more consistent experience
-        in user code, which might make calls (like glVertexPointer()) that only work when VAO 0 is
-        bound in OpenGL 3.2+.
-    */
-    static bool shouldUseCustomVAO()
-    {
-       #if JUCE_OPENGL_ES
-        return false;
-       #else
-        return isCoreProfile();
-       #endif
-    }
-
-    static constexpr auto value = GL_VERTEX_ARRAY_BINDING;
-    static constexpr auto& gen = glGenVertexArrays;
-    static constexpr auto& del = glDeleteVertexArrays;
-    template <typename T>
-    static void bind (T x) { gl::glBindVertexArray (static_cast<GLuint> (x)); }
-    static constexpr auto predicate = shouldUseCustomVAO;
-};
-
-struct TraitsArrayBuffer
-{
-    static constexpr auto value = GL_ARRAY_BUFFER_BINDING;
-    static constexpr auto& gen = glGenBuffers;
-    static constexpr auto& del = glDeleteBuffers;
-    template <typename T>
-    static void bind (T x) { gl::glBindBuffer (GL_ARRAY_BUFFER, static_cast<GLuint> (x)); }
-    static bool predicate() { return true; }
-};
-
-struct TraitsElementArrayBuffer
-{
-    static constexpr auto value = GL_ELEMENT_ARRAY_BUFFER_BINDING;
-    static constexpr auto& gen = glGenBuffers;
-    static constexpr auto& del = glDeleteBuffers;
-    template <typename T>
-    static void bind (T x) { gl::glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, static_cast<GLuint> (x)); }
-    static bool predicate() { return true; }
-};
-
-template <typename Traits>
-class SavedBinding
-{
-public:
-    SavedBinding() = default;
-
-    ~SavedBinding()
-    {
-        if (! Traits::predicate())
-            return;
-
-        Traits::bind (values.previous);
-        Traits::del (1, &values.current);
-    }
-
-    void bind() const { Traits::bind (values.current); }
-
-    JUCE_DECLARE_NON_COPYABLE (SavedBinding)
-    JUCE_DECLARE_NON_MOVEABLE (SavedBinding)
-
-private:
-    struct Values
-    {
-        GLint previous{};
-        GLuint current{};
-    };
-
-    Values values = []
-    {
-        if (! Traits::predicate())
-            return Values{};
-
-        GLint previous{};
-        glGetIntegerv (Traits::value, &previous);
-
-        GLuint current{};
-        Traits::gen (1, &current);
-        Traits::bind (current);
-
-        return Values { previous, current };
-    }();
 };
 
 //==============================================================================
@@ -1118,10 +961,8 @@ struct StateHelpers
     //==============================================================================
     struct ActiveTextures
     {
-        explicit ActiveTextures (const OpenGLContext& c) noexcept
-            : context (c)
-        {
-        }
+        ActiveTextures (const OpenGLContext& c) noexcept  : context (c)
+        {}
 
         void clear() noexcept
         {
@@ -1135,28 +976,23 @@ struct StateHelpers
             {
                 quadQueue.flush();
 
-                for (int i = numTextures; --i >= 0;)
+                for (int i = 3; --i >= 0;)
                 {
                     if ((texturesEnabled & (1 << i)) != (textureIndexMask & (1 << i)))
                     {
                         setActiveTexture (i);
                         JUCE_CHECK_OPENGL_ERROR
 
-                        const auto thisTextureEnabled = (textureIndexMask & (1 << i)) != 0;
-
-                        if (! thisTextureEnabled)
-                            currentTextureID[i] = 0;
-
                        #if ! JUCE_ANDROID
-                        if (needsToEnableTexture)
+                        if ((textureIndexMask & (1 << i)) != 0)
+                            glEnable (GL_TEXTURE_2D);
+                        else
                         {
-                            if (thisTextureEnabled)
-                                glEnable (GL_TEXTURE_2D);
-                            else
-                                glDisable (GL_TEXTURE_2D);
-
-                            JUCE_CHECK_OPENGL_ERROR
+                            glDisable (GL_TEXTURE_2D);
+                            currentTextureID[i] = 0;
                         }
+
+                        clearGLError();
                        #endif
                     }
                 }
@@ -1206,18 +1042,14 @@ struct StateHelpers
             if (currentActiveTexture != index)
             {
                 currentActiveTexture = index;
-                context.extensions.glActiveTexture (GL_TEXTURE0 + (GLenum) index);
+                context.extensions.glActiveTexture ((GLenum) (GL_TEXTURE0 + index));
                 JUCE_CHECK_OPENGL_ERROR
             }
         }
 
         void bindTexture (GLuint textureID) noexcept
         {
-            if (currentActiveTexture < 0 || numTextures <= currentActiveTexture)
-            {
-                jassertfalse;
-                return;
-            }
+            jassert (currentActiveTexture >= 0);
 
             if (currentTextureID[currentActiveTexture] != textureID)
             {
@@ -1236,11 +1068,9 @@ struct StateHelpers
         }
 
     private:
-        static constexpr auto numTextures = 3;
-        GLuint currentTextureID[numTextures];
+        GLuint currentTextureID[3];
         int texturesEnabled = 0, currentActiveTexture = -1;
         const OpenGLContext& context;
-        const bool needsToEnableTexture = ! context.isCoreProfile();
 
         ActiveTextures& operator= (const ActiveTextures&);
     };
@@ -1260,7 +1090,7 @@ struct StateHelpers
 
             for (int i = 0; i < numTexturesToCache - 2; ++i)
             {
-                auto* t = textures.getUnchecked (i);
+                auto* t = textures.getUnchecked(i);
 
                 if (t->getWidth() == w && t->getHeight() == h)
                     return textures.removeAndReturn (i);
@@ -1293,7 +1123,7 @@ struct StateHelpers
 
                 JUCE_CHECK_OPENGL_ERROR;
                 PixelARGB lookup[gradientTextureSize];
-                gradient.createLookupTable (lookup);
+                gradient.createLookupTable (lookup, gradientTextureSize);
                 gradientTextures.getUnchecked (activeGradientIndex)->loadARGB (lookup, gradientTextureSize, 1);
             }
 
@@ -1318,6 +1148,9 @@ struct StateHelpers
         ~ShaderQuadQueue() noexcept
         {
             static_assert (sizeof (VertexInfo) == 8, "Sanity check VertexInfo size");
+            context.extensions.glBindBuffer (GL_ARRAY_BUFFER, 0);
+            context.extensions.glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
+            context.extensions.glDeleteBuffers (2, buffers);
         }
 
         void initialise() noexcept
@@ -1341,10 +1174,10 @@ struct StateHelpers
                 indexData[i + 5] = (GLushort) (v + 3);
             }
 
-            savedElementArrayBuffer.bind();
+            context.extensions.glGenBuffers (2, buffers);
+            context.extensions.glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, buffers[0]);
             context.extensions.glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof (indexData), indexData, GL_STATIC_DRAW);
-
-            savedArrayBuffer.bind();
+            context.extensions.glBindBuffer (GL_ARRAY_BUFFER, buffers[1]);
             context.extensions.glBufferData (GL_ARRAY_BUFFER, sizeof (vertexData), vertexData, GL_STREAM_DRAW);
             JUCE_CHECK_OPENGL_ERROR
         }
@@ -1428,8 +1261,7 @@ struct StateHelpers
 
         enum { maxNumQuads = 256 };
 
-        SavedBinding<TraitsArrayBuffer> savedArrayBuffer;
-        SavedBinding<TraitsElementArrayBuffer> savedElementArrayBuffer;
+        GLuint buffers[2];
         VertexInfo vertexData[maxNumQuads * 4];
         GLushort indexData[maxNumQuads * 6];
         const OpenGLContext& context;
@@ -1457,30 +1289,21 @@ struct StateHelpers
     //==============================================================================
     struct CurrentShader
     {
-        explicit CurrentShader (OpenGLContext& c)
-            : context (c)
+        CurrentShader (OpenGLContext& c) noexcept  : context (c)
         {
+            auto programValueID = "GraphicsContextPrograms";
+            programs = static_cast<ShaderPrograms*> (context.getAssociatedObject (programValueID));
+
+            if (programs == nullptr)
+            {
+                programs = new ShaderPrograms (context);
+                context.setAssociatedObject (programValueID, programs.get());
+            }
         }
 
         ~CurrentShader()
         {
             jassert (activeShader == nullptr);
-
-            if (initialShader == nullptr)
-                return;
-
-            initialShader->program.use();
-
-            // If there are multiple VAOs, then normally binding the previous VAO would also restore
-            // the shader attributes that were last used with that VAO. If there's just a single
-            // global VAO, we need to reset the attributes manually.
-            if (! TraitsVAO::shouldUseCustomVAO())
-                initialShader->bindAttributes();
-
-            if (initialShader->onShaderActivated)
-                initialShader->onShaderActivated (initialShader->program);
-
-            initialShader->set2DBounds (initialBounds);
         }
 
         void setShader (Rectangle<int> bounds, ShaderQuadQueue& quadQueue, ShaderPrograms::ShaderBase& shader)
@@ -1491,7 +1314,7 @@ struct StateHelpers
 
                 activeShader = &shader;
                 shader.program.use();
-                shader.bindAttributes();
+                shader.bindAttributes (context);
 
                 if (shader.onShaderActivated)
                     shader.onShaderActivated (shader.program);
@@ -1518,60 +1341,21 @@ struct StateHelpers
             if (activeShader != nullptr)
             {
                 quadQueue.flush();
-                activeShader->unbindAttributes();
+                activeShader->unbindAttributes (context);
                 activeShader = nullptr;
                 context.extensions.glUseProgram (0);
             }
         }
 
-        static constexpr auto programValueID = "GraphicsContextPrograms";
-
         OpenGLContext& context;
-        ShaderPrograms::Ptr programs = std::invoke ([&]
-        {
-            if (ShaderPrograms::Ptr result { static_cast<ShaderPrograms*> (context.getAssociatedObject (programValueID)) })
-                return result;
-
-            ShaderPrograms::Ptr newPrograms = new ShaderPrograms (context);
-            context.setAssociatedObject (programValueID, newPrograms.get());
-            return newPrograms;
-        });
+        ShaderPrograms::Ptr programs;
 
     private:
-        // We store the original shader and bounds so that we can restore the previous
-        // when the CurrentShader is destroyed.
-        // Note that we do *not* set the active shader and bounds to their previous values.
-        // If a CurrentShader has been constructed, there's a good chance that a new VAO has
-        // also been constructed, in which case we'll need to call bindAttributes() the first
-        // time that a shader is used in this new VAO.
-
-        ShaderPrograms::ShaderBase* initialShader = programs->findActiveShader();
         ShaderPrograms::ShaderBase* activeShader = nullptr;
-        Rectangle<float> initialBounds = initialShader != nullptr
-                                       ? initialShader->get2DBounds()
-                                       : Rectangle<float>{};
         Rectangle<int> currentBounds;
 
         CurrentShader& operator= (const CurrentShader&);
     };
-};
-
-//==============================================================================
-class ViewportRestorer
-{
-public:
-    ViewportRestorer()
-    {
-        glGetIntegerv (GL_VIEWPORT, bounds);
-    }
-
-    ~ViewportRestorer()
-    {
-        glViewport (bounds[0], bounds[1], bounds[2], bounds[3]);
-    }
-
-private:
-    GLint bounds[4];
 };
 
 //==============================================================================
@@ -1779,12 +1563,10 @@ struct GLState
 
 private:
     GLuint previousFrameBufferTarget;
-    SavedBinding<TraitsVAO> savedVAOBinding;
-    ViewportRestorer viewportRestorer;
 };
 
 //==============================================================================
-struct SavedState final : public RenderingHelpers::SavedStateBase<SavedState>
+struct SavedState  : public RenderingHelpers::SavedStateBase<SavedState>
 {
     using BaseClass = RenderingHelpers::SavedStateBase<SavedState>;
 
@@ -1834,6 +1616,51 @@ struct SavedState final : public RenderingHelpers::SavedStateBase<SavedState>
             clip->renderImageUntransformed (*this, finishedLayerState.transparencyLayer,
                                             (int) (finishedLayerState.transparencyLayerAlpha * 255.0f),
                                             clipBounds.getX(), clipBounds.getY(), false);
+        }
+    }
+
+    using GlyphCacheType = RenderingHelpers::GlyphCache<RenderingHelpers::CachedGlyphEdgeTable<SavedState>, SavedState>;
+
+    void drawGlyph (int glyphNumber, const AffineTransform& trans)
+    {
+        if (clip != nullptr)
+        {
+            if (trans.isOnlyTranslation() && ! transform.isRotated)
+            {
+                auto& cache = GlyphCacheType::getInstance();
+                Point<float> pos (trans.getTranslationX(), trans.getTranslationY());
+
+                if (transform.isOnlyTranslated)
+                {
+                    cache.drawGlyph (*this, font, glyphNumber, pos + transform.offset.toFloat());
+                }
+                else
+                {
+                    pos = transform.transformed (pos);
+
+                    Font f (font);
+                    f.setHeight (font.getHeight() * transform.complexTransform.mat11);
+
+                    auto xScale = transform.complexTransform.mat00 / transform.complexTransform.mat11;
+
+                    if (std::abs (xScale - 1.0f) > 0.01f)
+                        f.setHorizontalScale (xScale);
+
+                    cache.drawGlyph (*this, f, glyphNumber, pos);
+                }
+            }
+            else
+            {
+                auto fontHeight = font.getHeight();
+
+                auto t = transform.getTransformWith (AffineTransform::scale (fontHeight * font.getHorizontalScale(), fontHeight)
+                                                                     .followedBy (trans));
+
+                const std::unique_ptr<EdgeTable> et (font.getTypeface()->getEdgeTableForGlyph (glyphNumber, t, fontHeight));
+
+                if (et != nullptr)
+                    fillShape (*new EdgeTableRegionType (*et), false);
+            }
         }
     }
 
@@ -1898,7 +1725,7 @@ struct SavedState final : public RenderingHelpers::SavedStateBase<SavedState>
     }
 
     //==============================================================================
-    Font font { FontOptions{} };
+    Font font;
     GLState* state;
     bool isUsingCustomShader = false;
 
@@ -1911,9 +1738,9 @@ private:
 
 
 //==============================================================================
-struct ShaderContext final : public RenderingHelpers::StackBasedLowLevelGraphicsContext<SavedState>
+struct ShaderContext   : public RenderingHelpers::StackBasedLowLevelGraphicsContext<SavedState>
 {
-    explicit ShaderContext (const Target& target)  : glState (target)
+    ShaderContext (const Target& target)  : glState (target)
     {
         stack.initialise (new SavedState (&glState));
     }
@@ -1923,37 +1750,27 @@ struct ShaderContext final : public RenderingHelpers::StackBasedLowLevelGraphics
         static_cast<SavedState&> (*stack).fillRectWithCustomShader (shader, area);
     }
 
-    std::unique_ptr<ImageType> getPreferredImageTypeForTemporaryImages() const override
-    {
-        return std::make_unique<OpenGLImageType>();
-    }
-
     GLState glState;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ShaderContext)
 };
 
-struct NonShaderContext final : public LowLevelGraphicsSoftwareRenderer
+struct NonShaderContext   : public LowLevelGraphicsSoftwareRenderer
 {
     NonShaderContext (const Target& t, const Image& im)
         : LowLevelGraphicsSoftwareRenderer (im), target (t), image (im)
     {}
 
-    ~NonShaderContext() override
+    ~NonShaderContext()
     {
         JUCE_CHECK_OPENGL_ERROR
         auto previousFrameBufferTarget = OpenGLFrameBuffer::getCurrentFrameBufferTarget();
 
        #if ! JUCE_ANDROID
         target.context.extensions.glActiveTexture (GL_TEXTURE0);
-
-        if (! target.context.isCoreProfile())
-            glEnable (GL_TEXTURE_2D);
-
+        glEnable (GL_TEXTURE_2D);
         clearGLError();
        #endif
-
-        ViewportRestorer viewportRestorer;
 
         OpenGLTexture texture;
         texture.loadImage (image);
@@ -1974,11 +1791,6 @@ struct NonShaderContext final : public LowLevelGraphicsSoftwareRenderer
         JUCE_CHECK_OPENGL_ERROR
     }
 
-    std::unique_ptr<ImageType> getPreferredImageTypeForTemporaryImages() const noexcept override
-    {
-        return std::make_unique<OpenGLImageType>();
-    }
-
 private:
     Target target;
     Image image;
@@ -1988,7 +1800,7 @@ private:
 
 static void clearOpenGLGlyphCacheCallback()
 {
-    RenderingHelpers::GlyphCache::getInstance().reset();
+    SavedState::GlyphCacheType::getInstance().reset();
 }
 
 static std::unique_ptr<LowLevelGraphicsContext> createOpenGLContext (const Target& target)
@@ -2021,8 +1833,8 @@ std::unique_ptr<LowLevelGraphicsContext> createOpenGLGraphicsContext (OpenGLCont
 }
 
 //==============================================================================
-struct CustomProgram final : public ReferenceCountedObject,
-                             public OpenGLRendering::ShaderPrograms::ShaderBase
+struct CustomProgram  : public ReferenceCountedObject,
+                        public OpenGLRendering::ShaderPrograms::ShaderBase
 {
     CustomProgram (OpenGLRendering::ShaderContext& c, const String& fragmentShader)
         : ShaderBase (c.glState.target.context, fragmentShader.toRawUTF8())

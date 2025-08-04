@@ -1,33 +1,24 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
+   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+   End User License Agreement: www.juce.com/juce-6-licence
+   Privacy Policy: www.juce.com/juce-privacy-policy
 
-   Or:
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -37,10 +28,10 @@
 #include "../../Project/UI/jucer_ProjectContentComponent.h"
 
 //==============================================================================
-void TreePanelBase::setRoot (std::unique_ptr<JucerTreeViewBase> root)
+void TreePanelBase::setRoot (JucerTreeViewBase* root)
 {
-    rootItem = std::move (root);
-    tree.setRootItem (rootItem.get());
+    rootItem.reset (root);
+    tree.setRootItem (root);
     tree.getRootItem()->setOpen (true);
 
     if (project != nullptr)
@@ -70,10 +61,14 @@ void TreePanelBase::saveOpenness()
 }
 
 //==============================================================================
-JucerTreeViewBase::JucerTreeViewBase()
+JucerTreeViewBase::JucerTreeViewBase()  : textX (0)
 {
     setLinesDrawnForSubItems (false);
     setDrawsInLeftMargin (true);
+}
+
+JucerTreeViewBase::~JucerTreeViewBase()
+{
 }
 
 void JucerTreeViewBase::refreshSubItems()
@@ -85,7 +80,7 @@ void JucerTreeViewBase::refreshSubItems()
 
 Font JucerTreeViewBase::getFont() const
 {
-    return FontOptions ((float) getItemHeight() * 0.6f);
+    return Font ((float) getItemHeight() * 0.6f);
 }
 
 void JucerTreeViewBase::paintOpenCloseButton (Graphics& g, const Rectangle<float>& area, Colour /*backgroundColour*/, bool isMouseOver)
@@ -128,13 +123,13 @@ void JucerTreeViewBase::paintContent (Graphics& g, Rectangle<int> area)
     g.drawFittedText (getDisplayName(), area, Justification::centredLeft, 1, 1.0f);
 }
 
-std::unique_ptr<Component> JucerTreeViewBase::createItemComponent()
+Component* JucerTreeViewBase::createItemComponent()
 {
-    return std::make_unique<TreeItemComponent> (*this);
+    return new TreeItemComponent (*this);
 }
 
 //==============================================================================
-class RenameTreeItemCallback final : public ModalComponentManager::Callback
+class RenameTreeItemCallback  : public ModalComponentManager::Callback
 {
 public:
     RenameTreeItemCallback (JucerTreeViewBase& ti, Component& parent, const Rectangle<int>& bounds)
@@ -161,7 +156,7 @@ public:
     }
 
 private:
-    struct RenameEditor final : public TextEditor
+    struct RenameEditor   : public TextEditor
     {
         void inputAttemptWhenModal() override   { exitModalState (0); }
     };
@@ -186,9 +181,9 @@ void JucerTreeViewBase::itemClicked (const MouseEvent& e)
     if (e.mods.isPopupMenu())
     {
         if (getOwnerView()->getNumSelectedItems() > 1)
-            showMultiSelectionPopupMenu (e.getMouseDownScreenPosition());
+            showMultiSelectionPopupMenu();
         else
-            showPopupMenu (e.getMouseDownScreenPosition());
+            showPopupMenu();
     }
     else if (isSelected())
     {
@@ -196,16 +191,27 @@ void JucerTreeViewBase::itemClicked (const MouseEvent& e)
     }
 }
 
+void JucerTreeViewBase::deleteItem()    {}
+void JucerTreeViewBase::deleteAllSelectedItems() {}
+void JucerTreeViewBase::showDocument()  {}
+void JucerTreeViewBase::showPopupMenu() {}
+void JucerTreeViewBase::showAddMenu()  {}
+void JucerTreeViewBase::showMultiSelectionPopupMenu() {}
+
 static void treeViewMenuItemChosen (int resultCode, WeakReference<JucerTreeViewBase> item)
 {
     if (item != nullptr)
         item->handlePopupMenuResult (resultCode);
 }
 
-void JucerTreeViewBase::launchPopupMenu (PopupMenu& m, Point<int> p)
+void JucerTreeViewBase::launchPopupMenu (PopupMenu& m)
 {
-    m.showMenuAsync (PopupMenu::Options().withTargetScreenArea ({ p.x, p.y, 1, 1 }),
+    m.showMenuAsync (PopupMenu::Options(),
                      ModalCallbackFunction::create (treeViewMenuItemChosen, WeakReference<JucerTreeViewBase> (this)));
+}
+
+void JucerTreeViewBase::handlePopupMenuResult (int)
+{
 }
 
 ProjectContentComponent* JucerTreeViewBase::getProjectContentComponent() const
@@ -218,7 +224,7 @@ ProjectContentComponent* JucerTreeViewBase::getProjectContentComponent() const
 }
 
 //==============================================================================
-class JucerTreeViewBase::ItemSelectionTimer final : public Timer
+class JucerTreeViewBase::ItemSelectionTimer  : public Timer
 {
 public:
     explicit ItemSelectionTimer (JucerTreeViewBase& tvb)  : owner (tvb) {}

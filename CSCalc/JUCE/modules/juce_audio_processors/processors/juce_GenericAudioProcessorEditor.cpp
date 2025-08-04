@@ -1,33 +1,24 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
+   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+   End User License Agreement: www.juce.com/juce-6-licence
+   Privacy Policy: www.juce.com/juce-privacy-policy
 
-   Or:
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -35,9 +26,9 @@
 namespace juce
 {
 
-class ParameterListener : private AudioProcessorParameter::Listener,
-                          private AudioProcessorListener,
-                          private Timer
+class ParameterListener   : private AudioProcessorParameter::Listener,
+                            private AudioProcessorListener,
+                            private Timer
 {
 public:
     ParameterListener (AudioProcessor& proc, AudioProcessorParameter& param)
@@ -106,21 +97,13 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParameterListener)
 };
 
-class ParameterComponent : public Component,
-                           public ParameterListener
-{
-public:
-    using ParameterListener::ParameterListener;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParameterComponent)
-};
-
 //==============================================================================
-class BooleanParameterComponent final : public ParameterComponent
+class BooleanParameterComponent final   : public Component,
+                                          private ParameterListener
 {
 public:
     BooleanParameterComponent (AudioProcessor& proc, AudioProcessorParameter& param)
-        : ParameterComponent (proc, param)
+        : ParameterListener (proc, param)
     {
         // Set the initial value.
         handleNewParameterValue();
@@ -139,12 +122,12 @@ public:
         button.setBounds (area.reduced (0, 10));
     }
 
+private:
     void handleNewParameterValue() override
     {
         button.setToggleState (isParameterOn(), dontSendNotification);
     }
 
-private:
     void buttonClicked()
     {
         if (isParameterOn() != button.getToggleState())
@@ -163,11 +146,12 @@ private:
 };
 
 //==============================================================================
-class SwitchParameterComponent final : public ParameterComponent
+class SwitchParameterComponent final   : public Component,
+                                         private ParameterListener
 {
 public:
     SwitchParameterComponent (AudioProcessor& proc, AudioProcessorParameter& param)
-        : ParameterComponent (proc, param)
+        : ParameterListener (proc, param)
     {
         for (auto& button : buttons)
         {
@@ -202,6 +186,7 @@ public:
             button.setBounds (area.removeFromLeft (80));
     }
 
+private:
     void handleNewParameterValue() override
     {
         bool newState = isParameterOn();
@@ -213,7 +198,6 @@ public:
         }
     }
 
-private:
     void rightButtonChanged()
     {
         auto buttonState = buttons[1].getToggleState();
@@ -265,11 +249,12 @@ private:
 };
 
 //==============================================================================
-class ChoiceParameterComponent final : public ParameterComponent
+class ChoiceParameterComponent final   : public Component,
+                                         private ParameterListener
 {
 public:
     ChoiceParameterComponent (AudioProcessor& proc, AudioProcessorParameter& param)
-        : ParameterComponent (proc, param),
+        : ParameterListener (proc, param),
           parameterValues (getParameter().getAllValueStrings())
     {
         box.addItemList (parameterValues, 1);
@@ -302,7 +287,7 @@ private:
             index = roundToInt (getParameter().getValue() * (float) (parameterValues.size() - 1));
         }
 
-        box.setSelectedItemIndex (index, dontSendNotification);
+        box.setSelectedItemIndex (index);
     }
 
     void boxChanged()
@@ -327,18 +312,17 @@ private:
 };
 
 //==============================================================================
-class SliderParameterComponent final : public ParameterComponent
+class SliderParameterComponent final   : public Component,
+                                         private ParameterListener
 {
 public:
     SliderParameterComponent (AudioProcessor& proc, AudioProcessorParameter& param)
-        : ParameterComponent (proc, param)
+        : ParameterListener (proc, param)
     {
         if (getParameter().getNumSteps() != AudioProcessor::getDefaultNumParameterSteps())
             slider.setRange (0.0, 1.0, 1.0 / (getParameter().getNumSteps() - 1.0));
         else
             slider.setRange (0.0, 1.0);
-
-        slider.setDoubleClickReturnValue (true, param.getDefaultValue());
 
         slider.setScrollWheelEnabled (false);
         addAndMakeVisible (slider);
@@ -368,6 +352,12 @@ public:
         slider.setBounds (area);
     }
 
+private:
+    void updateTextDisplay()
+    {
+        valueLabel.setText (getParameter().getCurrentValueAsText(), dontSendNotification);
+    }
+
     void handleNewParameterValue() override
     {
         if (! isDragging)
@@ -377,17 +367,11 @@ public:
         }
     }
 
-private:
-    void updateTextDisplay()
-    {
-        valueLabel.setText (getParameter().getCurrentValueAsText(), dontSendNotification);
-    }
-
     void sliderValueChanged()
     {
         auto newVal = (float) slider.getValue();
 
-        if (! approximatelyEqual (getParameter().getValue(), newVal))
+        if (getParameter().getValue() != newVal)
         {
             if (! isDragging)
                 getParameter().beginChangeGesture();
@@ -420,35 +404,25 @@ private:
 };
 
 //==============================================================================
-class ParameterDisplayComponent final : public Component,
-                                        private AudioProcessorListener,
-                                        private AsyncUpdater
+class ParameterDisplayComponent   : public Component
 {
 public:
-    ParameterDisplayComponent (AudioProcessorEditor& editorIn, AudioProcessorParameter& param)
-        : editor (editorIn), parameter (param)
+    ParameterDisplayComponent (AudioProcessor& processor, AudioProcessorParameter& param)
+        : parameter (param)
     {
-        editor.processor.addListener (this);
-
         parameterName.setText (parameter.getName (128), dontSendNotification);
         parameterName.setJustificationType (Justification::centredRight);
-        parameterName.setInterceptsMouseClicks (false, false);
         addAndMakeVisible (parameterName);
 
         parameterLabel.setText (parameter.getLabel(), dontSendNotification);
-        parameterLabel.setInterceptsMouseClicks (false, false);
         addAndMakeVisible (parameterLabel);
 
-        addAndMakeVisible (*(parameterComp = createParameterComp (editor.processor)));
+        addAndMakeVisible (*(parameterComp = createParameterComp (processor)));
 
         setSize (400, 40);
     }
 
-    ~ParameterDisplayComponent() override
-    {
-        cancelPendingUpdate();
-        editor.processor.removeListener (this);
-    }
+    void paint (Graphics&) override {}
 
     void resized() override
     {
@@ -459,22 +433,12 @@ public:
         parameterComp->setBounds (area);
     }
 
-    void mouseDown (const MouseEvent& e) override
-    {
-        if (e.mods.isRightButtonDown())
-            if (auto* context = editor.getHostContext())
-                if (auto menu = context->getContextMenuForParameter (&parameter))
-                    menu->getEquivalentPopupMenu().showMenuAsync (PopupMenu::Options().withTargetComponent (this)
-                                                                                      .withMousePosition());
-    }
-
 private:
-    AudioProcessorEditor& editor;
     AudioProcessorParameter& parameter;
     Label parameterName, parameterLabel;
-    std::unique_ptr<ParameterComponent> parameterComp;
+    std::unique_ptr<Component> parameterComp;
 
-    std::unique_ptr<ParameterComponent> createParameterComp (AudioProcessor& processor) const
+    std::unique_ptr<Component> createParameterComp (AudioProcessor& processor) const
     {
         // The AU, AUv3 and VST (only via a .vstxml file) SDKs support
         // marking a parameter as boolean. If you want consistency across
@@ -498,127 +462,103 @@ private:
         return std::make_unique<SliderParameterComponent> (processor, parameter);
     }
 
-    void audioProcessorParameterChanged (AudioProcessor*, int, float) override {}
-
-    void audioProcessorChanged (AudioProcessor*, const ChangeDetails& details) override
-    {
-        if (! details.parameterInfoChanged)
-            return;
-
-        if (MessageManager::getInstance()->isThisTheMessageThread())
-            handleAsyncUpdate();
-        else
-            triggerAsyncUpdate();
-    }
-
-    void handleAsyncUpdate() override
-    {
-        parameterName .setText (parameter.getName (128), dontSendNotification);
-        parameterLabel.setText (parameter.getLabel(),    dontSendNotification);
-
-        if (auto* p = parameterComp.get())
-            p->handleNewParameterValue();
-    }
-
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParameterDisplayComponent)
 };
 
 //==============================================================================
-struct ParamControlItem final : public TreeViewItem
+class ParametersPanel   : public Component
 {
-    ParamControlItem (AudioProcessorEditor& editorIn, AudioProcessorParameter& paramIn)
-        : editor (editorIn), param (paramIn) {}
-
-    bool mightContainSubItems() override { return false; }
-
-    std::unique_ptr<Component> createItemComponent() override
+public:
+    ParametersPanel (AudioProcessor& processor, const Array<AudioProcessorParameter*>& parameters)
     {
-        return std::make_unique<ParameterDisplayComponent> (editor, param);
-    }
+        for (auto* param : parameters)
+            if (param->isAutomatable())
+                addAndMakeVisible (paramComponents.add (new ParameterDisplayComponent (processor, *param)));
 
-    int getItemHeight() const override { return 40; }
+        int maxWidth = 400;
+        int height = 0;
 
-    AudioProcessorEditor& editor;
-    AudioProcessorParameter& param;
-};
-
-struct ParameterGroupItem final : public TreeViewItem
-{
-    ParameterGroupItem (AudioProcessorEditor& editor, const AudioProcessorParameterGroup& group)
-        : name (group.getName())
-    {
-        for (auto* node : group)
+        for (auto& comp : paramComponents)
         {
-            if (auto* param = node->getParameter())
-                if (param->isAutomatable())
-                    addSubItem (new ParamControlItem (editor, *param));
-
-            if (auto* inner = node->getGroup())
-            {
-                auto groupItem = std::make_unique<ParameterGroupItem> (editor, *inner);
-
-                if (groupItem->getNumSubItems() != 0)
-                    addSubItem (groupItem.release());
-            }
+            maxWidth = jmax (maxWidth, comp->getWidth());
+            height += comp->getHeight();
         }
+
+        setSize (maxWidth, jmax (height, 125));
     }
 
-    bool mightContainSubItems() override { return getNumSubItems() > 0; }
-
-    std::unique_ptr<Component> createItemComponent() override
+    ~ParametersPanel() override
     {
-        return std::make_unique<Label> (name, name);
+        paramComponents.clear();
     }
 
-    String name;
+    void paint (Graphics& g) override
+    {
+        g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
+    }
+
+    void resized() override
+    {
+        auto area = getLocalBounds();
+
+        for (auto* comp : paramComponents)
+            comp->setBounds (area.removeFromTop (comp->getHeight()));
+    }
+
+private:
+    OwnedArray<ParameterDisplayComponent> paramComponents;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ParametersPanel)
 };
 
 //==============================================================================
 struct GenericAudioProcessorEditor::Pimpl
 {
-    Pimpl (AudioProcessorEditor& editor)
-        : legacyParameters (editor.processor, false),
-          groupItem (editor, legacyParameters.getGroup())
+    Pimpl (GenericAudioProcessorEditor& parent)  : owner (parent)
     {
-        const auto numIndents = getNumIndents (groupItem);
-        const auto width = 400 + view.getIndentSize() * numIndents;
+        auto* p = parent.getAudioProcessor();
+        jassert (p != nullptr);
 
-        view.setSize (width, 400);
-        view.setDefaultOpenness (true);
-        view.setRootItemVisible (false);
-        view.setRootItem (&groupItem);
+        legacyParameters.update (*p, false);
+
+        owner.setOpaque (true);
+
+        view.setViewedComponent (new ParametersPanel (*p, legacyParameters.params));
+        owner.addAndMakeVisible (view);
+
+        view.setScrollBarsShown (true, false);
     }
 
-    static int getNumIndents (const TreeViewItem& item)
+    ~Pimpl()
     {
-        int maxInner = 0;
-
-        for (auto i = 0; i < item.getNumSubItems(); ++i)
-            maxInner = jmax (maxInner, 1 + getNumIndents (*item.getSubItem (i)));
-
-        return maxInner;
+        view.setViewedComponent (nullptr, false);
     }
 
+    void resize (Rectangle<int> size)
+    {
+        view.setBounds (size);
+        auto content = view.getViewedComponent();
+        content->setSize (view.getMaximumVisibleWidth(), content->getHeight());
+    }
+
+    //==============================================================================
+    GenericAudioProcessorEditor& owner;
     LegacyAudioParametersWrapper legacyParameters;
-    ParameterGroupItem groupItem;
-    TreeView view;
+    Viewport view;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Pimpl)
 };
+
 
 //==============================================================================
 GenericAudioProcessorEditor::GenericAudioProcessorEditor (AudioProcessor& p)
-    : AudioProcessorEditor (p), pimpl (std::make_unique<Pimpl> (*this))
+    : AudioProcessorEditor (p), pimpl (new Pimpl (*this))
 {
-    auto* viewport = pimpl->view.getViewport();
-
-    setOpaque (true);
-    addAndMakeVisible (pimpl->view);
-
-    setResizable (true, false);
-    setSize (viewport->getViewedComponent()->getWidth() + viewport->getVerticalScrollBar().getWidth(),
-             jlimit (125, 400, viewport->getViewedComponent()->getHeight()));
+    setSize (pimpl->view.getViewedComponent()->getWidth() + pimpl->view.getVerticalScrollBar().getWidth(),
+             jmin (pimpl->view.getViewedComponent()->getHeight(), 400));
 }
 
-GenericAudioProcessorEditor::~GenericAudioProcessorEditor() = default;
+GenericAudioProcessorEditor::~GenericAudioProcessorEditor() {}
 
 void GenericAudioProcessorEditor::paint (Graphics& g)
 {
@@ -627,7 +567,7 @@ void GenericAudioProcessorEditor::paint (Graphics& g)
 
 void GenericAudioProcessorEditor::resized()
 {
-    pimpl->view.setBounds (getLocalBounds());
+    pimpl->resize (getLocalBounds());
 }
 
 } // namespace juce

@@ -1,33 +1,21 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   The code included in this file is provided under the terms of the ISC license
+   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
+   To use, copy, modify, and/or distribute this software for any purpose with or
+   without fee is hereby granted provided that the above copyright notice and
+   this permission notice appear in all copies.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
-
-   Or:
-
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -53,7 +41,7 @@ public:
         @param initialSize          the size of block to create
         @param initialiseToZero     whether to clear the memory or just leave it uninitialised
     */
-    MemoryBlock (size_t initialSize,
+    MemoryBlock (const size_t initialSize,
                  bool initialiseToZero = false);
 
     /** Creates a copy of another memory block. */
@@ -132,9 +120,6 @@ public:
     const char* end() const noexcept                                { return begin() + getSize(); }
 
     //==============================================================================
-    /** Returns true if the memory block has zero size. */
-    bool isEmpty() const noexcept                                   { return getSize() == 0; }
-
     /** Returns the block's current allocated size, in bytes. */
     size_t getSize() const noexcept                                 { return size; }
 
@@ -150,7 +135,7 @@ public:
                                             uninitialised
         @see ensureSize
     */
-    void setSize (size_t newSize,
+    void setSize (const size_t newSize,
                   bool initialiseNewSpaceToZero = false);
 
     /** Increases the block's size only if it's smaller than a given size.
@@ -162,7 +147,7 @@ public:
                                             uninitialised
         @see setSize
     */
-    void ensureSize (size_t minimumSize,
+    void ensureSize (const size_t minimumSize,
                      bool initialiseNewSpaceToZero = false);
 
     /** Frees all the blocks data, setting its size to 0. */
@@ -182,7 +167,7 @@ public:
     /** Resizes this block to the given size and fills its contents from the supplied buffer.
         The data pointer must not be null.
     */
-    void replaceAll (const void* data, size_t numBytes);
+    void replaceWith (const void* data, size_t numBytes);
 
     /** Inserts some data into the block.
         The dataToInsert pointer must not be null. This block's size will be increased accordingly.
@@ -280,15 +265,6 @@ public:
     */
     bool fromBase64Encoding  (StringRef encodedString);
 
-    //==============================================================================
-   #ifndef DOXYGEN
-    [[deprecated ("Use the replaceAll method instead, which will also replace the data when numBytes == 0.")]]
-    void replaceWith (const void* srcData, size_t numBytes)
-    {
-        if (numBytes > 0)
-            replaceAll (srcData, numBytes);
-    }
-   #endif
 
 private:
     //==============================================================================

@@ -1,33 +1,24 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
+   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+   End User License Agreement: www.juce.com/juce-6-licence
+   Privacy Policy: www.juce.com/juce-privacy-policy
 
-   Or:
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -35,7 +26,7 @@
 namespace juce
 {
 
-#if (JUCE_PLUGINHOST_VST3 && (JUCE_MAC || JUCE_WINDOWS || JUCE_LINUX || JUCE_BSD)) || DOXYGEN
+#if (JUCE_PLUGINHOST_VST3 && (JUCE_MAC || JUCE_WINDOWS || JUCE_LINUX)) || DOXYGEN
 
 /**
     Implements a plugin format for VST3s.
@@ -52,17 +43,11 @@ public:
     ~VST3PluginFormat() override;
 
     //==============================================================================
-   #ifndef DOXYGEN
     /** Attempts to reload a VST3 plugin's state from some preset file data.
 
         @see VSTPluginFormat::loadFromFXBFile
     */
-    [[deprecated ("Instead of using this function, use AudioPluginInstance::getExtensions() "
-                 "to visit the ExtensionsVisitor::VST3 struct for the instance, if it exists. "
-                 "Then, call ExtensionsVisitor::VST3::setPreset() to set the state using the "
-                 "contents of a vstpreset file.")]]
     static bool setStateFromVSTPresetFile (AudioPluginInstance*, const MemoryBlock&);
-   #endif
 
     //==============================================================================
     static String getFormatName()                   { return "VST3"; }
@@ -77,7 +62,6 @@ public:
     StringArray searchPathsForPlugins (const FileSearchPath&, bool recursive, bool) override;
     bool doesPluginStillExist (const PluginDescription&) override;
     FileSearchPath getDefaultLocationsToSearch() override;
-    void createARAFactoryAsync (const PluginDescription&, ARAFactoryCreationCallback callback) override;
 
 private:
     //==============================================================================
@@ -85,7 +69,6 @@ private:
                                int initialBufferSize, PluginCreationCallback) override;
     bool requiresUnblockedMessageThreadDuringCreation (const PluginDescription&) const override;
     void recursiveFileSearch (StringArray&, const File&, bool recursive);
-    StringArray getLibraryPaths (const String&);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VST3PluginFormat)
 };

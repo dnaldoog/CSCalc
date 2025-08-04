@@ -1,22 +1,18 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework examples.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE examples.
+   Copyright (c) 2020 - Raw Material Software Limited
 
    The code included in this file is provided under the terms of the ISC license
    http://www.isc.org/downloads/software-support-policy/isc-license. Permission
-   to use, copy, modify, and/or distribute this software for any purpose with or
+   To use, copy, modify, and/or distribute this software for any purpose with or
    without fee is hereby granted provided that the above copyright notice and
    this permission notice appear in all copies.
 
-   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-   REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-   AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-   INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-   LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-   OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-   PERFORMANCE OF THIS SOFTWARE.
+   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES,
+   WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR
+   PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -35,7 +31,7 @@
 
  dependencies:     juce_core, juce_data_structures, juce_events, juce_graphics,
                    juce_gui_basics, juce_gui_extra, juce_opengl
- exporters:        xcode_mac, vs2022, xcode_iphone
+ exporters:        xcode_mac, vs2019, xcode_iphone
 
  moduleFlags:      JUCE_STRICT_REFCOUNTEDPOINTER=1
 
@@ -58,7 +54,7 @@
     This component lives inside our window, and this is where you should put all
     your controls and content.
 */
-class OpenGLAppDemo final : public OpenGLAppComponent
+class OpenGLAppDemo   : public OpenGLAppComponent
 {
 public:
     //==============================================================================
@@ -87,26 +83,22 @@ public:
 
     Matrix3D<float> getProjectionMatrix() const
     {
-        const ScopedLock lock (mutex);
-
         auto w = 1.0f / (0.5f + 0.1f);
-        auto h = w * bounds.toFloat().getAspectRatio (false);
+        auto h = w * getLocalBounds().toFloat().getAspectRatio (false);
 
         return Matrix3D<float>::fromFrustum (-w, w, -h, h, 4.0f, 30.0f);
     }
 
     Matrix3D<float> getViewMatrix() const
     {
-        auto viewMatrix = Matrix3D<float>::fromTranslation ({ 0.0f, 0.0f, -10.0f });
-        auto rotationMatrix = viewMatrix.rotation ({ -0.3f, 5.0f * std::sin ((float) getFrameCounter() * 0.01f), 0.0f });
+        Matrix3D<float> viewMatrix ({ 0.0f, 0.0f, -10.0f });
+        Matrix3D<float> rotationMatrix = viewMatrix.rotation ({ -0.3f, 5.0f * std::sin ((float) getFrameCounter() * 0.01f), 0.0f });
 
-        return viewMatrix * rotationMatrix;
+        return rotationMatrix * viewMatrix;
     }
 
     void render() override
     {
-        using namespace ::juce::gl;
-
         jassert (OpenGLHelpers::isContextActive());
 
         auto desktopScale = (float) openGLContext.getRenderingScale();
@@ -115,26 +107,22 @@ public:
         glEnable (GL_BLEND);
         glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        {
-            const ScopedLock lock (mutex);
-            glViewport (0, 0,
-                        roundToInt (desktopScale * (float) bounds.getWidth()),
-                        roundToInt (desktopScale * (float) bounds.getHeight()));
-        }
+        glViewport (0, 0, roundToInt (desktopScale * (float) getWidth()), roundToInt (desktopScale * (float) getHeight()));
 
         shader->use();
 
-        if (uniforms->projectionMatrix != nullptr)
+        if (uniforms->projectionMatrix.get() != nullptr)
             uniforms->projectionMatrix->setMatrix4 (getProjectionMatrix().mat, 1, false);
 
-        if (uniforms->viewMatrix != nullptr)
+        if (uniforms->viewMatrix.get() != nullptr)
             uniforms->viewMatrix->setMatrix4 (getViewMatrix().mat, 1, false);
 
-        shape->draw (*attributes);
+        shape->draw (openGLContext, *attributes);
 
         // Reset the element buffers so child Components draw correctly
-        glBindBuffer (GL_ARRAY_BUFFER, 0);
-        glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
+        openGLContext.extensions.glBindBuffer (GL_ARRAY_BUFFER, 0);
+        openGLContext.extensions.glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
+
     }
 
     void paint (Graphics& g) override
@@ -154,9 +142,6 @@ public:
         // This is called when this component is resized.
         // If you add any child components, this is where you should
         // update their positions.
-
-        const ScopedLock lock (mutex);
-        bounds = getLocalBounds();
     }
 
     void createShaders()
@@ -209,12 +194,12 @@ public:
             attributes.reset();
             uniforms  .reset();
 
-            shader = std::move (newShader);
+            shader.reset (newShader.release());
             shader->use();
 
-            shape     .reset (new Shape());
-            attributes.reset (new Attributes (*shader));
-            uniforms  .reset (new Uniforms (*shader));
+            shape     .reset (new Shape (openGLContext));
+            attributes.reset (new Attributes (openGLContext, *shader));
+            uniforms  .reset (new Uniforms (openGLContext, *shader));
 
             statusText = "GLSL: v" + String (OpenGLShaderProgram::getLanguageVersion(), 2);
         }
@@ -239,62 +224,57 @@ private:
     // This class just manages the attributes that the shaders use.
     struct Attributes
     {
-        explicit Attributes (OpenGLShaderProgram& shaderProgram)
+        Attributes (OpenGLContext& openGLContext, OpenGLShaderProgram& shaderProgram)
         {
-            position      .reset (createAttribute (shaderProgram, "position"));
-            normal        .reset (createAttribute (shaderProgram, "normal"));
-            sourceColour  .reset (createAttribute (shaderProgram, "sourceColour"));
-            textureCoordIn.reset (createAttribute (shaderProgram, "textureCoordIn"));
+            position      .reset (createAttribute (openGLContext, shaderProgram, "position"));
+            normal        .reset (createAttribute (openGLContext, shaderProgram, "normal"));
+            sourceColour  .reset (createAttribute (openGLContext, shaderProgram, "sourceColour"));
+            textureCoordIn.reset (createAttribute (openGLContext, shaderProgram, "textureCoordIn"));
         }
 
-        void enable()
+        void enable (OpenGLContext& glContext)
         {
-            using namespace ::juce::gl;
-
             if (position.get() != nullptr)
             {
-                glVertexAttribPointer (position->attributeID, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), nullptr);
-                glEnableVertexAttribArray (position->attributeID);
+                glContext.extensions.glVertexAttribPointer (position->attributeID, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), nullptr);
+                glContext.extensions.glEnableVertexAttribArray (position->attributeID);
             }
 
             if (normal.get() != nullptr)
             {
-                glVertexAttribPointer (normal->attributeID, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 3));
-                glEnableVertexAttribArray (normal->attributeID);
+                glContext.extensions.glVertexAttribPointer (normal->attributeID, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 3));
+                glContext.extensions.glEnableVertexAttribArray (normal->attributeID);
             }
 
             if (sourceColour.get() != nullptr)
             {
-                glVertexAttribPointer (sourceColour->attributeID, 4, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 6));
-                glEnableVertexAttribArray (sourceColour->attributeID);
+                glContext.extensions.glVertexAttribPointer (sourceColour->attributeID, 4, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 6));
+                glContext.extensions.glEnableVertexAttribArray (sourceColour->attributeID);
             }
 
             if (textureCoordIn.get() != nullptr)
             {
-                glVertexAttribPointer (textureCoordIn->attributeID, 2, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 10));
-                glEnableVertexAttribArray (textureCoordIn->attributeID);
+                glContext.extensions.glVertexAttribPointer (textureCoordIn->attributeID, 2, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 10));
+                glContext.extensions.glEnableVertexAttribArray (textureCoordIn->attributeID);
             }
         }
 
-        void disable()
+        void disable (OpenGLContext& glContext)
         {
-            using namespace ::juce::gl;
-
-            if (position != nullptr)       glDisableVertexAttribArray (position->attributeID);
-            if (normal != nullptr)         glDisableVertexAttribArray (normal->attributeID);
-            if (sourceColour != nullptr)   glDisableVertexAttribArray (sourceColour->attributeID);
-            if (textureCoordIn != nullptr) glDisableVertexAttribArray (textureCoordIn->attributeID);
+            if (position.get() != nullptr)       glContext.extensions.glDisableVertexAttribArray (position->attributeID);
+            if (normal.get() != nullptr)         glContext.extensions.glDisableVertexAttribArray (normal->attributeID);
+            if (sourceColour.get() != nullptr)   glContext.extensions.glDisableVertexAttribArray (sourceColour->attributeID);
+            if (textureCoordIn.get() != nullptr) glContext.extensions.glDisableVertexAttribArray (textureCoordIn->attributeID);
         }
 
         std::unique_ptr<OpenGLShaderProgram::Attribute> position, normal, sourceColour, textureCoordIn;
 
     private:
-        static OpenGLShaderProgram::Attribute* createAttribute (OpenGLShaderProgram& shader,
+        static OpenGLShaderProgram::Attribute* createAttribute (OpenGLContext& openGLContext,
+                                                                OpenGLShaderProgram& shader,
                                                                 const char* attributeName)
         {
-            using namespace ::juce::gl;
-
-            if (glGetAttribLocation (shader.getProgramID(), attributeName) < 0)
+            if (openGLContext.extensions.glGetAttribLocation (shader.getProgramID(), attributeName) < 0)
                 return nullptr;
 
             return new OpenGLShaderProgram::Attribute (shader, attributeName);
@@ -305,21 +285,20 @@ private:
     // This class just manages the uniform values that the demo shaders use.
     struct Uniforms
     {
-        explicit Uniforms (OpenGLShaderProgram& shaderProgram)
+        Uniforms (OpenGLContext& openGLContext, OpenGLShaderProgram& shaderProgram)
         {
-            projectionMatrix.reset (createUniform (shaderProgram, "projectionMatrix"));
-            viewMatrix      .reset (createUniform (shaderProgram, "viewMatrix"));
+            projectionMatrix.reset (createUniform (openGLContext, shaderProgram, "projectionMatrix"));
+            viewMatrix      .reset (createUniform (openGLContext, shaderProgram, "viewMatrix"));
         }
 
         std::unique_ptr<OpenGLShaderProgram::Uniform> projectionMatrix, viewMatrix;
 
     private:
-        static OpenGLShaderProgram::Uniform* createUniform (OpenGLShaderProgram& shaderProgram,
+        static OpenGLShaderProgram::Uniform* createUniform (OpenGLContext& openGLContext,
+                                                            OpenGLShaderProgram& shaderProgram,
                                                             const char* uniformName)
         {
-            using namespace ::juce::gl;
-
-            if (glGetUniformLocation (shaderProgram.getProgramID(), uniformName) < 0)
+            if (openGLContext.extensions.glGetUniformLocation (shaderProgram.getProgramID(), uniformName) < 0)
                 return nullptr;
 
             return new OpenGLShaderProgram::Uniform (shaderProgram, uniformName);
@@ -332,71 +311,64 @@ private:
     */
     struct Shape
     {
-        Shape()
+        Shape (OpenGLContext& glContext)
         {
             if (shapeFile.load (loadEntireAssetIntoString ("teapot.obj")).wasOk())
                 for (auto* shapeVertices : shapeFile.shapes)
-                    vertexBuffers.add (new VertexBuffer (*shapeVertices));
+                    vertexBuffers.add (new VertexBuffer (glContext, *shapeVertices));
         }
 
-        void draw (Attributes& glAttributes)
+        void draw (OpenGLContext& glContext, Attributes& glAttributes)
         {
-            using namespace ::juce::gl;
-
             for (auto* vertexBuffer : vertexBuffers)
             {
                 vertexBuffer->bind();
 
-                glAttributes.enable();
+                glAttributes.enable (glContext);
                 glDrawElements (GL_TRIANGLES, vertexBuffer->numIndices, GL_UNSIGNED_INT, nullptr);
-                glAttributes.disable();
+                glAttributes.disable (glContext);
             }
         }
 
     private:
         struct VertexBuffer
         {
-            explicit VertexBuffer (WavefrontObjFile::Shape& aShape)
+            VertexBuffer (OpenGLContext& context, WavefrontObjFile::Shape& aShape) : openGLContext (context)
             {
-                using namespace ::juce::gl;
-
                 numIndices = aShape.mesh.indices.size();
 
-                glGenBuffers (1, &vertexBuffer);
-                glBindBuffer (GL_ARRAY_BUFFER, vertexBuffer);
+                openGLContext.extensions.glGenBuffers (1, &vertexBuffer);
+                openGLContext.extensions.glBindBuffer (GL_ARRAY_BUFFER, vertexBuffer);
 
                 Array<Vertex> vertices;
                 createVertexListFromMesh (aShape.mesh, vertices, Colours::green);
 
-                glBufferData (GL_ARRAY_BUFFER,
-                              static_cast<GLsizeiptr> (static_cast<size_t> (vertices.size()) * sizeof (Vertex)),
-                              vertices.getRawDataPointer(), GL_STATIC_DRAW);
+                openGLContext.extensions.glBufferData (GL_ARRAY_BUFFER,
+                                                       static_cast<GLsizeiptr> (static_cast<size_t> (vertices.size()) * sizeof (Vertex)),
+                                                       vertices.getRawDataPointer(), GL_STATIC_DRAW);
 
-                glGenBuffers (1, &indexBuffer);
-                glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
-                glBufferData (GL_ELEMENT_ARRAY_BUFFER,
-                              static_cast<GLsizeiptr> (static_cast<size_t> (numIndices) * sizeof (juce::uint32)),
-                              aShape.mesh.indices.getRawDataPointer(), GL_STATIC_DRAW);
+                openGLContext.extensions.glGenBuffers (1, &indexBuffer);
+                openGLContext.extensions.glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+                openGLContext.extensions.glBufferData (GL_ELEMENT_ARRAY_BUFFER,
+                                                       static_cast<GLsizeiptr> (static_cast<size_t> (numIndices) * sizeof (juce::uint32)),
+                                                       aShape.mesh.indices.getRawDataPointer(), GL_STATIC_DRAW);
             }
 
             ~VertexBuffer()
             {
-                using namespace ::juce::gl;
-
-                glDeleteBuffers (1, &vertexBuffer);
-                glDeleteBuffers (1, &indexBuffer);
+                openGLContext.extensions.glDeleteBuffers (1, &vertexBuffer);
+                openGLContext.extensions.glDeleteBuffers (1, &indexBuffer);
             }
 
             void bind()
             {
-                using namespace ::juce::gl;
-
-                glBindBuffer (GL_ARRAY_BUFFER, vertexBuffer);
-                glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+                openGLContext.extensions.glBindBuffer (GL_ARRAY_BUFFER, vertexBuffer);
+                openGLContext.extensions.glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
             }
 
             GLuint vertexBuffer, indexBuffer;
             int numIndices;
+            OpenGLContext& openGLContext;
 
             JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VertexBuffer)
         };
@@ -433,9 +405,6 @@ private:
     std::unique_ptr<Uniforms> uniforms;
 
     String newVertexShader, newFragmentShader;
-
-    Rectangle<int> bounds;
-    CriticalSection mutex;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (OpenGLAppDemo)
 };

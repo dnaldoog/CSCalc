@@ -1,33 +1,24 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
+   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+   End User License Agreement: www.juce.com/juce-6-licence
+   Privacy Policy: www.juce.com/juce-privacy-policy
 
-   Or:
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -53,7 +44,7 @@ namespace ColourHelpers
 
         float hue = 0.0f;
 
-        if (hi > 0 && ! exactlyEqual (hi, lo))
+        if (hi > 0)
         {
             auto invDiff = 1.0f / (float) (hi - lo);
 
@@ -86,21 +77,15 @@ namespace ColourHelpers
             auto hi = jmax (r, g, b);
             auto lo = jmin (r, g, b);
 
-            if (hi < 0)
-                return;
+            if (hi > 0)
+            {
+                lightness = ((float) (hi + lo) / 2.0f) / 255.0f;
 
-            lightness = ((float) (hi + lo) / 2.0f) / 255.0f;
+                if (lightness > 0.0f)
+                    hue = getHue (col);
 
-            if (lightness <= 0.0f)
-                return;
-
-            hue = getHue (col);
-
-            if (1.0f <= lightness)
-                return;
-
-            auto denominator = 1.0f - std::abs ((2.0f * lightness) - 1.0f);
-            saturation = ((float) (hi - lo) / 255.0f) / denominator;
+                saturation = ((float) (hi - lo) / 255.0f) / (1.0f - std::abs ((2.0f * lightness) - 1.0f));
+            }
         }
 
         Colour toColour (Colour original) const noexcept
@@ -300,16 +285,11 @@ Colour::Colour (PixelAlpha alpha) noexcept
 }
 
 //==============================================================================
-PixelARGB Colour::getPixelARGB() const noexcept
+const PixelARGB Colour::getPixelARGB() const noexcept
 {
     PixelARGB p (argb);
     p.premultiply();
     return p;
-}
-
-PixelARGB Colour::getNonPremultipliedPixelARGB() const noexcept
-{
-    return argb;
 }
 
 uint32 Colour::getARGB() const noexcept
@@ -474,7 +454,6 @@ Colour Colour::withMultipliedLightness (float amount) const noexcept
 //==============================================================================
 Colour Colour::brighter (float amount) const noexcept
 {
-    jassert (amount >= 0.0f);
     amount = 1.0f / (1.0f + amount);
 
     return Colour ((uint8) (255 - (amount * (255 - getRed()))),
@@ -485,7 +464,6 @@ Colour Colour::brighter (float amount) const noexcept
 
 Colour Colour::darker (float amount) const noexcept
 {
-    jassert (amount >= 0.0f);
     amount = 1.0f / (1.0f + amount);
 
     return Colour ((uint8) (amount * getRed()),
@@ -556,7 +534,7 @@ String Colour::toString() const
 
 Colour Colour::fromString (StringRef encodedColourString)
 {
-    return Colour (CharacterFunctions::HexParser<uint32>::parse (encodedColourString.text));
+    return Colour ((uint32) CharacterFunctions::HexParser<int>::parse (encodedColourString.text));
 }
 
 String Colour::toDisplayString (const bool includeAlphaValue) const
@@ -571,7 +549,7 @@ String Colour::toDisplayString (const bool includeAlphaValue) const
 //==============================================================================
 #if JUCE_UNIT_TESTS
 
-class ColourTests final : public UnitTest
+class ColourTests  : public UnitTest
 {
 public:
     ColourTests()

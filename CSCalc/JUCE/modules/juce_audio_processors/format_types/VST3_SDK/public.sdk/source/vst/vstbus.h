@@ -8,7 +8,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2024, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2019, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -37,13 +37,10 @@
 #pragma once
 
 #include "base/source/fobject.h"
+#include "base/source/fstring.h"
 #include "pluginterfaces/vst/ivstcomponent.h"
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 
-#include <string>
-#if SMTG_CPP_17
-#include <string_view>
-#endif
 #include <vector>
 
 //------------------------------------------------------------------------
@@ -52,8 +49,8 @@ namespace Vst {
 
 //------------------------------------------------------------------------
 /** Basic Bus object.
-\ingroup vstClasses 
-*/
+\ingroup vstClasses */
+//------------------------------------------------------------------------
 class Bus: public FObject
 {
 public:
@@ -67,13 +64,8 @@ public:
 	/** Activates the bus. */
 	void setActive (TBool state) { active = state; }
 
-#if SMTG_CPP_17
 	/** Sets a new name for this bus. */
-	void setName (std::u16string_view newName) { name = newName; }
-#else
-	/** Sets a new name for this bus. */
-	void setName (const std::u16string& newName) { name = newName; }
-#endif
+	void setName (String newName) { name = newName; }
 
 	/** Sets a new busType for this bus. */
 	void setBusType (BusType newBusType) { busType = newBusType; }
@@ -87,16 +79,16 @@ public:
 	OBJ_METHODS (Vst::Bus, FObject)
 //------------------------------------------------------------------------
 protected:
-	std::u16string name;		///< name
+	String name;				///< name
 	BusType busType;			///< kMain or kAux, see \ref BusTypes
-	int32 flags;				///< flags, see \ref BusInfo::BusFlags
+	int32 flags;				///< flags, see \ref BusFlags
 	TBool active;				///< activation state
 };
 
 //------------------------------------------------------------------------
 /** Description of an Event Bus.
-\ingroup vstClasses
-*/
+\ingroup vstClasses */
+//------------------------------------------------------------------------
 class EventBus: public Bus
 {
 public:
@@ -117,8 +109,8 @@ protected:
 
 //------------------------------------------------------------------------
 /** Description of an Audio Bus.
-\ingroup vstClasses 
-*/
+\ingroup vstClasses */
+//------------------------------------------------------------------------
 class AudioBus: public Bus
 {
 public:
@@ -143,9 +135,9 @@ protected:
 };
 
 //------------------------------------------------------------------------
-/** List of Busses.
-\ingroup vstClasses 
-*/
+/** List of Buses.
+\ingroup vstClasses */
+//------------------------------------------------------------------------
 class BusList: public FObject, public std::vector<IPtr<Vst::Bus> >
 {
 public:

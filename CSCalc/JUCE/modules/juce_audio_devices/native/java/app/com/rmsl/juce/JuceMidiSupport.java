@@ -1,33 +1,21 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   The code included in this file is provided under the terms of the ISC license
+   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
+   To use, copy, modify, and/or distribute this software for any purpose with or
+   without fee is hereby granted provided that the above copyright notice and
+   this permission notice appear in all copies.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
-
-   Or:
-
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -36,7 +24,6 @@ package com.rmsl.juce;
 
 
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
@@ -56,7 +43,6 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.BluetoothDevice;
 import android.media.midi.MidiOutputPort;
 import android.media.midi.MidiReceiver;
-import android.os.Build;
 import android.os.ParcelUuid;
 import android.util.Log;
 import android.util.Pair;
@@ -70,7 +56,6 @@ import java.util.HashSet;
 import java.util.List;
 
 import static android.content.Context.MIDI_SERVICE;
-import static android.content.Context.BLUETOOTH_SERVICE;
 
 public class JuceMidiSupport
 {
@@ -92,18 +77,10 @@ public class JuceMidiSupport
         String getName ();
     }
 
-    static BluetoothAdapter getDefaultBluetoothAdapter (Context ctx)
-    {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S_V2)
-            return BluetoothAdapter.getDefaultAdapter();
-
-        return ((BluetoothManager) ctx.getSystemService (BLUETOOTH_SERVICE)).getAdapter();
-    }
-
     //==============================================================================
-    public static class BluetoothMidiManager extends ScanCallback
+    public static class BluetoothManager extends ScanCallback
     {
-        BluetoothMidiManager (Context contextToUse)
+        BluetoothManager (Context contextToUse)
         {
             appContext = contextToUse;
         }
@@ -115,7 +92,7 @@ public class JuceMidiSupport
 
         public String getHumanReadableStringForBluetoothAddress (String address)
         {
-            BluetoothDevice btDevice = getDefaultBluetoothAdapter (appContext).getRemoteDevice (address);
+            BluetoothDevice btDevice = BluetoothAdapter.getDefaultAdapter ().getRemoteDevice (address);
             return btDevice.getName ();
         }
 
@@ -126,11 +103,11 @@ public class JuceMidiSupport
 
         public void startStopScan (boolean shouldStart)
         {
-            BluetoothAdapter bluetoothAdapter = getDefaultBluetoothAdapter (appContext);
+            BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter ();
 
             if (bluetoothAdapter == null)
             {
-                Log.d ("JUCE", "BluetoothMidiManager error: could not get default Bluetooth adapter");
+                Log.d ("JUCE", "BluetoothManager error: could not get default Bluetooth adapter");
                 return;
             }
 
@@ -138,7 +115,7 @@ public class JuceMidiSupport
 
             if (bluetoothLeScanner == null)
             {
-                Log.d ("JUCE", "BluetoothMidiManager error: could not get Bluetooth LE scanner");
+                Log.d ("JUCE", "BluetoothManager error: could not get Bluetooth LE scanner");
                 return;
             }
 
@@ -163,7 +140,7 @@ public class JuceMidiSupport
 
         public boolean pairBluetoothMidiDevice (String address)
         {
-            BluetoothDevice btDevice = getDefaultBluetoothAdapter (appContext).getRemoteDevice (address);
+            BluetoothDevice btDevice = BluetoothAdapter.getDefaultAdapter ().getRemoteDevice (address);
 
             if (btDevice == null)
             {
@@ -566,8 +543,12 @@ public class JuceMidiSupport
                 return;
             }
 
-            MidiDeviceInfo[] foundDevices = manager.getDevices ();
+            openPorts = new HashMap<MidiPortPath, WeakReference<JuceMidiPort>> ();
+            midiDevices = new ArrayList<Pair<MidiDevice, BluetoothGatt>> ();
+            openTasks = new HashMap<Integer, MidiDeviceOpenTask> ();
+            btDevicesPairing = new HashMap<String, BluetoothGatt> ();
 
+            MidiDeviceInfo[] foundDevices = manager.getDevices ();
             for (MidiDeviceInfo info : foundDevices)
                 onDeviceAdded (info);
 
@@ -829,7 +810,6 @@ public class JuceMidiSupport
             openPorts.remove (path);
         }
 
-        @Override
         public void onDeviceAdded (MidiDeviceInfo info)
         {
             // only add standard midi devices
@@ -839,7 +819,6 @@ public class JuceMidiSupport
             manager.openDevice (info, this, null);
         }
 
-        @Override
         public void onDeviceRemoved (MidiDeviceInfo info)
         {
             synchronized (MidiDeviceManager.class)
@@ -877,11 +856,8 @@ public class JuceMidiSupport
                     midiDevices.remove (devicePair);
                 }
             }
-
-            handleDevicesChanged();
         }
 
-        @Override
         public void onDeviceStatusChanged (MidiDeviceStatus status)
         {
         }
@@ -957,7 +933,6 @@ public class JuceMidiSupport
                         BluetoothGatt gatt = openTasks.get (deviceID).getGatt ();
                         openTasks.remove (deviceID);
                         midiDevices.add (new Pair<MidiDevice, BluetoothGatt> (theDevice, gatt));
-                        handleDevicesChanged();
                     }
                 } else
                 {
@@ -998,6 +973,7 @@ public class JuceMidiSupport
             {
                 for (MidiDeviceInfo info : deviceInfos)
                 {
+                    int localIndex = 0;
                     if (info.getId () == path.deviceId)
                     {
                         for (MidiDeviceInfo.PortInfo portInfo : info.getPorts ())
@@ -1072,11 +1048,11 @@ public class JuceMidiSupport
         }
 
         private MidiManager manager;
-        private HashMap<String, BluetoothGatt> btDevicesPairing = new HashMap<String, BluetoothGatt>();
-        private HashMap<Integer, MidiDeviceOpenTask> openTasks = new HashMap<Integer, MidiDeviceOpenTask>();
-        private ArrayList<Pair<MidiDevice, BluetoothGatt>> midiDevices = new ArrayList<Pair<MidiDevice, BluetoothGatt>>();
+        private HashMap<String, BluetoothGatt> btDevicesPairing;
+        private HashMap<Integer, MidiDeviceOpenTask> openTasks;
+        private ArrayList<Pair<MidiDevice, BluetoothGatt>> midiDevices;
         private MidiDeviceInfo[] deviceInfos;
-        private HashMap<MidiPortPath, WeakReference<JuceMidiPort>> openPorts = new HashMap<MidiPortPath, WeakReference<JuceMidiPort>>();
+        private HashMap<MidiPortPath, WeakReference<JuceMidiPort>> openPorts;
         private Context appContext = null;
     }
 
@@ -1094,9 +1070,9 @@ public class JuceMidiSupport
         return midiDeviceManager;
     }
 
-    public static BluetoothMidiManager getAndroidBluetoothManager (Context context)
+    public static BluetoothManager getAndroidBluetoothManager (Context context)
     {
-        BluetoothAdapter adapter = getDefaultBluetoothAdapter (context);
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter ();
 
         if (adapter == null)
             return null;
@@ -1107,15 +1083,12 @@ public class JuceMidiSupport
         synchronized (JuceMidiSupport.class)
         {
             if (bluetoothManager == null)
-                bluetoothManager = new BluetoothMidiManager (context);
+                bluetoothManager = new BluetoothManager (context);
         }
 
         return bluetoothManager;
     }
 
-    // To be called when devices become (un)available
-    private native static void handleDevicesChanged();
-
     private static MidiDeviceManager midiDeviceManager = null;
-    private static BluetoothMidiManager bluetoothManager = null;
+    private static BluetoothManager bluetoothManager = null;
 }

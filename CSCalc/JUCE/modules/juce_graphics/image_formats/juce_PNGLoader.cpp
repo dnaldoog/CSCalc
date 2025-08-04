@@ -1,33 +1,24 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
+   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+   End User License Agreement: www.juce.com/juce-6-licence
+   Privacy Policy: www.juce.com/juce-privacy-policy
 
-   Or:
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -35,7 +26,21 @@
 namespace juce
 {
 
-JUCE_BEGIN_IGNORE_WARNINGS_MSVC (4390 4611 4365 4267 4616 2544 2545 6297)
+JUCE_BEGIN_IGNORE_WARNINGS_MSVC (4390 4611 4365 4267 4616 2544 2545)
+
+namespace zlibNamespace
+{
+#if JUCE_INCLUDE_ZLIB_CODE
+  #undef OS_CODE
+  #undef fdopen
+  #define ZLIB_INTERNAL
+  #define NO_DUMMY_DECL
+  #include <juce_core/zip/zlib/zlib.h>
+  #undef OS_CODE
+#else
+  #include JUCE_ZLIB_INCLUDE_PATH
+#endif
+}
 
 #if ! defined (jmp_buf) || ! defined (longjmp)
  #include <setjmp.h>
@@ -47,16 +52,20 @@ namespace pnglibNamespace
 
 #if JUCE_INCLUDE_PNGLIB_CODE || ! defined (JUCE_INCLUDE_PNGLIB_CODE)
 
-   JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wcomma",
-                                        "-Wfloat-equal",
+  #if _MSC_VER != 1310
+   using std::calloc; // (causes conflict in VS.NET 2003)
+   using std::malloc;
+   using std::free;
+  #endif
+
+   JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wsign-conversion",
                                         "-Wimplicit-fallthrough",
-                                        "-Wmaybe-uninitialized",
-                                        "-Wnull-pointer-subtraction",
-                                        "-Wsign-conversion",
                                         "-Wtautological-constant-out-of-range-compare",
-                                        "-Wzero-as-null-pointer-constant")
+                                        "-Wzero-as-null-pointer-constant",
+                                        "-Wcomma")
 
   #undef check
+  using std::abs;
   #define NO_DUMMY_DECL
   #define PNGLCONF_H 1
 
@@ -343,7 +352,7 @@ namespace PNGHelpers
     static void JUCE_CDECL errorCallback (png_structp p, png_const_charp)
     {
        #ifdef PNG_SETJMP_SUPPORTED
-        setjmp (png_jmpbuf (p));
+        setjmp(png_jmpbuf(p));
        #else
         longjmp (*(jmp_buf*) p->error_ptr, 1);
        #endif

@@ -18,7 +18,7 @@
 
 #include "fstrdefs.h"
 
-#include <cstdio>
+#include <stdio.h>
 
 #if SMTG_OS_WINDOWS
 #include <objbase.h>
@@ -26,37 +26,17 @@
 
 #if SMTG_OS_MACOS
 #include <CoreFoundation/CoreFoundation.h>
-
-#if !defined (SMTG_USE_STDATOMIC_H)
-#if defined(MAC_OS_X_VERSION_10_11) && defined(MAC_OS_X_VERSION_MIN_REQUIRED)
-#define SMTG_USE_STDATOMIC_H (MAC_OS_X_VERSION_MIN_REQUIRED > MAC_OS_X_VERSION_10_11)
-#else
-#define SMTG_USE_STDATOMIC_H 0
-#endif
-#endif // !defined (SMTG_USE_STDATOMIC_H)
-
-#if !SMTG_USE_STDATOMIC_H
 #include <libkern/OSAtomic.h>
+
 #if defined(__GNUC__) && (__GNUC__ >= 4) && !__LP64__
 // on 32 bit Mac OS X we can safely ignore the format warnings as sizeof(int) == sizeof(long)
 #pragma GCC diagnostic ignored "-Wformat"
-#endif 
-#endif // !SMTG_USE_STDATOMIC_H
-#endif // SMTG_OS_MACOS
+#endif
+
+#endif
 
 #if SMTG_OS_LINUX
-#if !defined (SMTG_USE_STDATOMIC_H)
-#if defined (__ANDROID__) || defined(_LIBCPP_VERSION)
-#define SMTG_USE_STDATOMIC_H 1
-#else
 #include <ext/atomicity.h>
-#endif
-#endif // !defined (SMTG_USE_STDATOMIC_H)
-#include <stdlib.h>
-#endif
-
-#if defined (SMTG_USE_STDATOMIC_H) && SMTG_USE_STDATOMIC_H 
-#include <stdatomic.h>
 #endif
 
 namespace Steinberg {
@@ -87,19 +67,10 @@ namespace FUnknownPrivate {
 //------------------------------------------------------------------------
 int32 PLUGIN_API atomicAdd (int32& var, int32 d)
 {
-#if SMTG_USE_STDATOMIC_H
-	return atomic_fetch_add (reinterpret_cast<atomic_int_least32_t*> (&var), d) + d;
-#else
 #if SMTG_OS_WINDOWS
-#ifdef __MINGW32__
-	return InterlockedExchangeAdd (reinterpret_cast<long volatile*>(&var), d) + d;
-#else
-	return InterlockedExchangeAdd ((LONG*)&var, d) + d;
-#endif
+	return InterlockedExchangeAdd (&var, d) + d;
 #elif SMTG_OS_MACOS
 	return OSAtomicAdd32Barrier (d, (int32_t*)&var);
-#elif defined(__ANDROID__)
-	return atomic_fetch_add ((atomic_int*)&var, d) + d;
 #elif SMTG_OS_LINUX
 	__gnu_cxx::__atomic_add (&var, d);
 	return var;
@@ -107,7 +78,6 @@ int32 PLUGIN_API atomicAdd (int32& var, int32 d)
 #warning implement me!
 	var += d;
 	return var;
-#endif
 #endif
 }
 } // FUnknownPrivate
@@ -161,7 +131,7 @@ bool FUID::generate ()
 	{
 		case RPC_S_OK: memcpy (data, (char*)&guid, sizeof (TUID)); return true;
 
-		case (HRESULT)RPC_S_UUID_LOCAL_ONLY:
+		case RPC_S_UUID_LOCAL_ONLY:
 		default: return false;
 	}
 #endif
@@ -177,13 +147,7 @@ bool FUID::generate ()
 	}
 	return false;
 
-#elif SMTG_OS_LINUX
-	srand ((size_t)this);
-	for (int32 i = 0; i < 16; i++)
-		data[i] = static_cast<unsigned char>(rand ());
-	return true;
 #else
-#warning implement me!
 	return false;
 #endif
 }
@@ -299,7 +263,7 @@ void FUID::toString (char8* string) const
 		return;
 
 #if COM_COMPATIBLE
-	auto* g = (GuidStruct*)data;
+	GuidStruct* g = (GuidStruct*)data;
 
 	char8 s[17];
 	Steinberg::toString8 (s, data, 8, 16);
@@ -385,7 +349,7 @@ void FUID::toRegistryString (char8* string) const
 // e.g. {c200e360-38c5-11ce-ae62-08002b2b79ef}
 
 #if COM_COMPATIBLE
-	auto* g = (GuidStruct*)data;
+	GuidStruct* g = (GuidStruct*)data;
 
 	char8 s1[5];
 	Steinberg::toString8 (s1, data, 8, 10);
@@ -406,17 +370,17 @@ void FUID::toRegistryString (char8* string) const
 	char8 s5[13];
 	Steinberg::toString8 (s5, data, 10, 16);
 
-	snprintf (string, 40, "{%s-%s-%s-%s-%s}", s1, s2, s3, s4, s5);
+	sprintf (string, "{%s-%s-%s-%s-%s}", s1, s2, s3, s4, s5);
 #endif
 }
 
 //------------------------------------------------------------------------
-void FUID::print (int32 style, char8* string, size_t stringBufferSize) const
+void FUID::print (char8* string, int32 style) const
 {
-	if (!string || stringBufferSize == 0) // no string: debug output
+	if (!string) // no string: debug output
 	{
 		char8 str[128];
-		print (style, str, 128);
+		print (str, style);
 
 #if SMTG_OS_WINDOWS
 		OutputDebugStringA (str);
@@ -433,29 +397,21 @@ void FUID::print (int32 style, char8* string, size_t stringBufferSize) const
 	switch (style)
 	{
 		case kINLINE_UID:
-			// length is 60 (with null-terminate)
-			snprintf (string, stringBufferSize, "INLINE_UID (0x%08X, 0x%08X, 0x%08X, 0x%08X)", l1,
-			          l2, l3, l4);
+			sprintf (string, "INLINE_UID (0x%08X, 0x%08X, 0x%08X, 0x%08X)", l1, l2, l3, l4);
 			break;
 
 		case kDECLARE_UID:
-			// length is 61 (with null-terminate)
-			snprintf (string, stringBufferSize, "DECLARE_UID (0x%08X, 0x%08X, 0x%08X, 0x%08X)", l1,
-			          l2, l3, l4);
+			sprintf (string, "DECLARE_UID (0x%08X, 0x%08X, 0x%08X, 0x%08X)", l1, l2, l3, l4);
 			break;
 
 		case kFUID:
-			// length is 54 (with null-terminate)
-			snprintf (string, stringBufferSize, "FUID (0x%08X, 0x%08X, 0x%08X, 0x%08X)", l1, l2, l3,
-			          l4);
+			sprintf (string, "FUID (0x%08X, 0x%08X, 0x%08X, 0x%08X)", l1, l2, l3, l4);
 			break;
 
 		case kCLASS_UID:
 		default:
-			// length is 78 (with null-terminate)
-			snprintf (string, stringBufferSize,
-			          "DECLARE_CLASS_IID (Interface, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", l1, l2, l3,
-			          l4);
+			sprintf (string, "DECLARE_CLASS_IID (Interface, 0x%08X, 0x%08X, 0x%08X, 0x%08X)", l1,
+			         l2, l3, l4);
 			break;
 	}
 }
@@ -475,7 +431,7 @@ static void toString8 (char8* string, const char* data, int32 i1, int32 i2)
 	for (int32 i = i1; i < i2; i++)
 	{
 		char8 s[3];
-		snprintf (s, 3, "%02X", (uint8)data[i]);
+		sprintf (s, "%02X", (uint8)data[i]);
 		strcat (string, s);
 	}
 }

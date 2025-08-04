@@ -1,33 +1,21 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   The code included in this file is provided under the terms of the ISC license
+   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
+   To use, copy, modify, and/or distribute this software for any purpose with or
+   without fee is hereby granted provided that the above copyright notice and
+   this permission notice appear in all copies.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
-
-   Or:
-
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -52,7 +40,7 @@ namespace juce
     if (myElement->hasTagName ("ANIMALS"))
     {
         // now we'll iterate its sub-elements looking for 'giraffe' elements..
-        for (auto* e : myElement->getChildIterator())
+        forEachXmlChildElement (*myElement, e)
         {
             if (e->hasTagName ("GIRAFFE"))
             {
@@ -144,7 +132,7 @@ public:
     /** A struct containing options for formatting the text when representing an
         XML element as a string.
     */
-    struct JUCE_API TextFormat
+    struct TextFormat
     {
         /** Default constructor. */
         TextFormat();
@@ -156,8 +144,8 @@ public:
         int lineWrapLength = 60;           /**< A maximum line length before wrapping is done. (If newLineChars is nullptr, this is ignored) */
         const char* newLineChars = "\r\n"; /**< Allows the newline characters to be set. If you set this to nullptr, then the whole XML document will be placed on a single line. */
 
-        [[nodiscard]] TextFormat singleLine() const;     /**< returns a copy of this format with newLineChars set to nullptr. */
-        [[nodiscard]] TextFormat withoutHeader() const;  /**< returns a copy of this format with the addDefaultHeader flag set to false. */
+        TextFormat singleLine() const;     /**< returns a copy of this format with newLineChars set to nullptr. */
+        TextFormat withoutHeader() const;  /**< returns a copy of this format with the addDefaultHeader flag set to false. */
     };
 
     /** Returns a text version of this XML element.
@@ -218,7 +206,7 @@ public:
     /** Returns the name of one of the elements attributes.
 
         E.g. for an element such as \<MOOSE legs="4" antlers="2">, then
-        getAttributeName (1) would return "antlers".
+        getAttributeName(1) would return "antlers".
 
         @see getAttributeValue, getStringAttribute
     */
@@ -227,7 +215,7 @@ public:
     /** Returns the value of one of the elements attributes.
 
         E.g. for an element such as \<MOOSE legs="4" antlers="2">, then
-        getAttributeName (1) would return "2".
+        getAttributeName(1) would return "2".
 
         @see getAttributeName, getStringAttribute
     */
@@ -357,8 +345,7 @@ public:
 
     /** Returns the first of this element's sub-elements.
         see getNextElement() for an example of how to iterate the sub-elements.
-
-        @see getChildIterator
+        @see forEachXmlChildElement
     */
     XmlElement* getFirstChildElement() const noexcept       { return firstChildElement; }
 
@@ -381,12 +368,12 @@ public:
         out.
 
         Also, it's much easier and neater to use this method indirectly via the
-        getChildIterator() method.
+        forEachXmlChildElement macro.
 
         @returns    the sibling element that follows this one, or a nullptr if
                     this is the last element in its parent
 
-        @see getNextElement, isTextElement, getChildIterator
+        @see getNextElement, isTextElement, forEachXmlChildElement
     */
     inline XmlElement* getNextElement() const noexcept          { return nextListItem; }
 
@@ -396,7 +383,7 @@ public:
         This is like getNextElement(), but will scan through the list until it
         finds an element with the given tag name.
 
-        @see getNextElement, getChildIterator
+        @see getNextElement, forEachXmlChildElementWithTagName
     */
     XmlElement* getNextElementWithTagName (StringRef requiredTagName) const;
 
@@ -701,7 +688,7 @@ private:
             return *this;
         }
 
-        Iterator operator++ (int)
+        Iterator operator++(int)
         {
             auto copy = *this;
             ++(*this);
@@ -744,30 +731,32 @@ public:
         return Iterator<GetNextElementWithTagName> { getChildByName (name), name };
     }
 
+    /** This allows us to trigger a warning inside deprecated macros. */
    #ifndef DOXYGEN
-    [[deprecated]] void macroBasedForLoop() const noexcept {}
-
-    [[deprecated ("This has been deprecated in favour of the toString method.")]]
-    String createDocument (StringRef dtdToUse,
-                           bool allOnOneLine = false,
-                           bool includeXmlHeader = true,
-                           StringRef encodingType = "UTF-8",
-                           int lineWrapLength = 60) const;
-
-    [[deprecated ("This has been deprecated in favour of the writeTo method.")]]
-    void writeToStream (OutputStream& output,
-                        StringRef dtdToUse,
-                        bool allOnOneLine = false,
-                        bool includeXmlHeader = true,
-                        StringRef encodingType = "UTF-8",
-                        int lineWrapLength = 60) const;
-
-    [[deprecated ("This has been deprecated in favour of the writeTo method.")]]
-    bool writeToFile (const File& destinationFile,
-                      StringRef dtdToUse,
-                      StringRef encodingType = "UTF-8",
-                      int lineWrapLength = 60) const;
+    JUCE_DEPRECATED_WITH_BODY (void macroBasedForLoop() const noexcept, {})
    #endif
+
+    //==============================================================================
+    /** This has been deprecated in favour of the toString() method. */
+    JUCE_DEPRECATED (String createDocument (StringRef dtdToUse,
+                                            bool allOnOneLine = false,
+                                            bool includeXmlHeader = true,
+                                            StringRef encodingType = "UTF-8",
+                                            int lineWrapLength = 60) const);
+
+    /** This has been deprecated in favour of the writeTo() method. */
+    JUCE_DEPRECATED (void writeToStream (OutputStream& output,
+                                         StringRef dtdToUse,
+                                         bool allOnOneLine = false,
+                                         bool includeXmlHeader = true,
+                                         StringRef encodingType = "UTF-8",
+                                         int lineWrapLength = 60) const);
+
+    /** This has been deprecated in favour of the writeTo() method. */
+    JUCE_DEPRECATED (bool writeToFile (const File& destinationFile,
+                                       StringRef dtdToUse,
+                                       StringRef encodingType = "UTF-8",
+                                       int lineWrapLength = 60) const);
 
 private:
     //==============================================================================
@@ -802,7 +791,7 @@ private:
     void reorderChildElements (XmlElement**, int) noexcept;
     XmlAttributeNode* getAttribute (StringRef) const noexcept;
 
-    // Sigh.. L"" or _T ("") string literals are problematic in general, and really inappropriate
+    // Sigh.. L"" or _T("") string literals are problematic in general, and really inappropriate
     // for XML tags. Use a UTF-8 encoded literal instead, or if you're really determined to use
     // UTF-16, cast it to a String and use the other constructor.
     XmlElement (const wchar_t*) = delete;
@@ -811,8 +800,6 @@ private:
 };
 
 //==============================================================================
-#ifndef DOXYGEN
-
 /** DEPRECATED: A handy macro to make it easy to iterate all the child elements in an XmlElement.
 
     New code should avoid this macro, and instead use getChildIterator directly.
@@ -863,7 +850,5 @@ private:
 */
 #define forEachXmlChildElementWithTagName(parentXmlElement, childElementVariableName, requiredTagName) \
     for (auto* (childElementVariableName) : ((parentXmlElement).macroBasedForLoop(), (parentXmlElement).getChildWithTagNameIterator ((requiredTagName))))
-
-#endif
 
 } // namespace juce

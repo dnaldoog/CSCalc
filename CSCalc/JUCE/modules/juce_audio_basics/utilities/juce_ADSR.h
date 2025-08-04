@@ -1,33 +1,21 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   The code included in this file is provided under the terms of the ISC license
+   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
+   To use, copy, modify, and/or distribute this software for any purpose with or
+   without fee is hereby granted provided that the above copyright notice and
+   this permission notice appear in all copies.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
-
-   Or:
-
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -43,19 +31,16 @@ namespace juce
     with setParameters() then call getNextSample() to get the envelope value to be applied
     to each audio sample or applyEnvelopeToBuffer() to apply the envelope to a whole buffer.
 
-    Do not change the parameters during playback. If you change the parameters before the
-    release stage has completed then you must call reset() before the next call to
-    noteOn().
-
     @tags{Audio}
 */
-class JUCE_API  ADSR
+class ADSR
 {
 public:
     //==============================================================================
     ADSR()
     {
-        recalculateRates();
+        setSampleRate (44100.0);
+        setParameters ({});
     }
 
     //==============================================================================
@@ -64,22 +49,19 @@ public:
 
         @tags{Audio}
     */
-    struct JUCE_API  Parameters
+    struct Parameters
     {
-        Parameters() = default;
+        /** Attack time in seconds. */
+        float attack  = 0.1f;
 
-        Parameters (float attackTimeSeconds,
-                    float decayTimeSeconds,
-                    float sustainLevel,
-                    float releaseTimeSeconds)
-            : attack (attackTimeSeconds),
-              decay (decayTimeSeconds),
-              sustain (sustainLevel),
-              release (releaseTimeSeconds)
-        {
-        }
+        /** Decay time in seconds. */
+        float decay   = 0.1f;
 
-        float attack = 0.1f, decay = 0.1f, sustain = 1.0f, release = 0.1f;
+        /** Sustain level. */
+        float sustain = 1.0f;
+
+        /** Release time in seconds. */
+        float release = 0.1f;
     };
 
     /** Sets the parameters that will be used by an ADSR object.
@@ -91,69 +73,70 @@ public:
     */
     void setParameters (const Parameters& newParameters)
     {
-        // need to call setSampleRate() first!
-        jassert (sampleRate > 0.0);
+        currentParameters = newParameters;
 
-        parameters = newParameters;
-        recalculateRates();
+        sustainLevel = newParameters.sustain;
+        calculateRates (newParameters);
+
+        if (currentState != State::idle)
+            checkCurrentState();
     }
 
     /** Returns the parameters currently being used by an ADSR object.
 
         @see setParameters
     */
-    const Parameters& getParameters() const noexcept  { return parameters; }
+    const Parameters& getParameters() const    { return currentParameters; }
 
     /** Returns true if the envelope is in its attack, decay, sustain or release stage. */
-    bool isActive() const noexcept                    { return state != State::idle; }
+    bool isActive() const noexcept             { return currentState != State::idle; }
 
     //==============================================================================
     /** Sets the sample rate that will be used for the envelope.
 
         This must be called before the getNextSample() or setParameters() methods.
     */
-    void setSampleRate (double newSampleRate) noexcept
+    void setSampleRate (double sampleRate)
     {
-        jassert (newSampleRate > 0.0);
-        sampleRate = newSampleRate;
+        jassert (sampleRate > 0.0);
+        sr = sampleRate;
     }
 
     //==============================================================================
     /** Resets the envelope to an idle state. */
-    void reset() noexcept
+    void reset()
     {
         envelopeVal = 0.0f;
-        state = State::idle;
+        currentState = State::idle;
     }
 
     /** Starts the attack phase of the envelope. */
-    void noteOn() noexcept
+    void noteOn()
     {
         if (attackRate > 0.0f)
         {
-            state = State::attack;
+            currentState = State::attack;
         }
         else if (decayRate > 0.0f)
         {
             envelopeVal = 1.0f;
-            state = State::decay;
+            currentState = State::decay;
         }
         else
         {
-            envelopeVal = parameters.sustain;
-            state = State::sustain;
+            currentState = State::sustain;
         }
     }
 
     /** Starts the release phase of the envelope. */
-    void noteOff() noexcept
+    void noteOff()
     {
-        if (state != State::idle)
+        if (currentState != State::idle)
         {
-            if (parameters.release > 0.0f)
+            if (currentParameters.release > 0.0f)
             {
-                releaseRate = (float) (envelopeVal / (parameters.release * sampleRate));
-                state = State::release;
+                releaseRate = static_cast<float> (envelopeVal / (currentParameters.release * sr));
+                currentState = State::release;
             }
             else
             {
@@ -167,56 +150,45 @@ public:
 
         @see applyEnvelopeToBuffer
     */
-    float getNextSample() noexcept
+    float getNextSample()
     {
-        switch (state)
+        if (currentState == State::idle)
+            return 0.0f;
+
+        if (currentState == State::attack)
         {
-            case State::idle:
+            envelopeVal += attackRate;
+
+            if (envelopeVal >= 1.0f)
             {
-                return 0.0f;
-            }
+                envelopeVal = 1.0f;
 
-            case State::attack:
+                if (decayRate > 0.0f)
+                    currentState = State::decay;
+                else
+                    currentState = State::sustain;
+            }
+        }
+        else if (currentState == State::decay)
+        {
+            envelopeVal -= decayRate;
+
+            if (envelopeVal <= sustainLevel)
             {
-                envelopeVal += attackRate;
-
-                if (envelopeVal >= 1.0f)
-                {
-                    envelopeVal = 1.0f;
-                    goToNextState();
-                }
-
-                break;
+                envelopeVal = sustainLevel;
+                currentState = State::sustain;
             }
+        }
+        else if (currentState == State::sustain)
+        {
+            envelopeVal = sustainLevel;
+        }
+        else if (currentState == State::release)
+        {
+            envelopeVal -= releaseRate;
 
-            case State::decay:
-            {
-                envelopeVal -= decayRate;
-
-                if (envelopeVal <= parameters.sustain)
-                {
-                    envelopeVal = parameters.sustain;
-                    goToNextState();
-                }
-
-                break;
-            }
-
-            case State::sustain:
-            {
-                envelopeVal = parameters.sustain;
-                break;
-            }
-
-            case State::release:
-            {
-                envelopeVal -= releaseRate;
-
-                if (envelopeVal <= 0.0f)
-                    goToNextState();
-
-                break;
-            }
+            if (envelopeVal <= 0.0f)
+                reset();
         }
 
         return envelopeVal;
@@ -231,18 +203,6 @@ public:
     void applyEnvelopeToBuffer (AudioBuffer<FloatType>& buffer, int startSample, int numSamples)
     {
         jassert (startSample + numSamples <= buffer.getNumSamples());
-
-        if (state == State::idle)
-        {
-            buffer.clear (startSample, numSamples);
-            return;
-        }
-
-        if (state == State::sustain)
-        {
-            buffer.applyGain (startSample, numSamples, parameters.sustain);
-            return;
-        }
 
         auto numChannels = buffer.getNumChannels();
 
@@ -259,51 +219,30 @@ public:
 
 private:
     //==============================================================================
-    void recalculateRates() noexcept
+    void calculateRates (const Parameters& parameters)
     {
-        auto getRate = [] (float distance, float timeInSeconds, double sr)
-        {
-            return timeInSeconds > 0.0f ? (float) (distance / (timeInSeconds * sr)) : -1.0f;
-        };
+        // need to call setSampleRate() first!
+        jassert (sr > 0.0);
 
-        attackRate  = getRate (1.0f, parameters.attack, sampleRate);
-        decayRate   = getRate (1.0f - parameters.sustain, parameters.decay, sampleRate);
-        releaseRate = getRate (parameters.sustain, parameters.release, sampleRate);
-
-        if ((state == State::attack && attackRate <= 0.0f)
-            || (state == State::decay && (decayRate <= 0.0f || envelopeVal <= parameters.sustain))
-            || (state == State::release && releaseRate <= 0.0f))
-        {
-            goToNextState();
-        }
+        attackRate  = (parameters.attack  > 0.0f ? static_cast<float> (1.0f                  / (parameters.attack * sr))  : -1.0f);
+        decayRate   = (parameters.decay   > 0.0f ? static_cast<float> ((1.0f - sustainLevel) / (parameters.decay * sr))   : -1.0f);
     }
 
-    void goToNextState() noexcept
+    void checkCurrentState()
     {
-        if (state == State::attack)
-        {
-            state = (decayRate > 0.0f ? State::decay : State::sustain);
-            return;
-        }
-
-        if (state == State::decay)
-        {
-            state = State::sustain;
-            return;
-        }
-
-        if (state == State::release)
-            reset();
+        if      (currentState == State::attack  && attackRate <= 0.0f)   currentState = decayRate > 0.0f ? State::decay : State::sustain;
+        else if (currentState == State::decay   && decayRate <= 0.0f)    currentState = State::sustain;
+        else if (currentState == State::release && releaseRate <= 0.0f)  reset();
     }
 
     //==============================================================================
     enum class State { idle, attack, decay, sustain, release };
 
-    State state = State::idle;
-    Parameters parameters;
+    State currentState = State::idle;
+    Parameters currentParameters;
 
-    double sampleRate = 44100.0;
-    float envelopeVal = 0.0f, attackRate = 0.0f, decayRate = 0.0f, releaseRate = 0.0f;
+    double sr = 0.0;
+    float envelopeVal = 0.0f, sustainLevel = 0.0f, attackRate = 0.0f, decayRate = 0.0f, releaseRate = 0.0f;
 };
 
 } // namespace juce

@@ -1,33 +1,24 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
+   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+   End User License Agreement: www.juce.com/juce-6-licence
+   Privacy Policy: www.juce.com/juce-privacy-policy
 
-   Or:
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -37,60 +28,63 @@ namespace juce
 
 //==============================================================================
 /**
-    Controls the order in which keyboard focus moves between components.
+    Controls the order in which focus moves between components.
 
-    The default behaviour of this class uses a FocusTraverser object internally to
-    determine the default/next/previous component until it finds one which wants
-    keyboard focus, as set by the Component::setWantsKeyboardFocus() method.
+    The default algorithm used by this class to work out the order of traversal
+    is as follows:
+    - if two components both have an explicit focus order specified, then the
+      one with the lowest number comes first (see the Component::setExplicitFocusOrder()
+      method).
+    - any component with an explicit focus order greater than 0 comes before ones
+      that don't have an order specified.
+    - any unspecified components are traversed in a left-to-right, then top-to-bottom
+      order.
 
-    If you need keyboard focus traversal in a more customised way, you can create
-    a subclass of ComponentTraverser that uses your own algorithm, and use
-    Component::createKeyboardFocusTraverser() to create it.
+    If you need traversal in a more customised way, you can create a subclass
+    of KeyboardFocusTraverser that uses your own algorithm, and use
+    Component::createFocusTraverser() to create it.
 
-    @see FocusTraverser, ComponentTraverser, Component::createKeyboardFocusTraverser
+    @see Component::setExplicitFocusOrder, Component::createFocusTraverser
 
     @tags{GUI}
 */
-class JUCE_API  KeyboardFocusTraverser  : public ComponentTraverser
+class JUCE_API  KeyboardFocusTraverser
 {
 public:
+    KeyboardFocusTraverser();
+
     /** Destructor. */
-    ~KeyboardFocusTraverser() override = default;
+    virtual ~KeyboardFocusTraverser();
 
-    /** Returns the component that should receive keyboard focus by default within the
-        given parent component.
+    /** Returns the component that should be given focus after the specified one
+        when moving "forwards".
 
-        The default implementation will return the foremost focusable component (as
-        determined by FocusTraverser) that also wants keyboard focus, or nullptr if
-        there is no suitable component.
+        The default implementation will return the next component which is to the
+        right of or below this one.
+
+        This may return nullptr if there's no suitable candidate.
     */
-    Component* getDefaultComponent (Component* parentComponent) override;
+    virtual Component* getNextComponent (Component* current);
 
-    /** Returns the component that should be given keyboard focus after the specified
-        one when moving "forwards".
+    /** Returns the component that should be given focus after the specified one
+        when moving "backwards".
 
-        The default implementation will return the next focusable component (as
-        determined by FocusTraverser) that also wants keyboard focus, or nullptr if
-        there is no suitable component.
+        The default implementation will return the next component which is to the
+        left of or above this one.
+
+        This may return nullptr if there's no suitable candidate.
     */
-    Component* getNextComponent (Component* current) override;
+    virtual Component* getPreviousComponent (Component* current);
 
-    /** Returns the component that should be given keyboard focus after the specified
-        one when moving "backwards".
+    /** Returns the component that should receive focus be default within the given
+        parent component.
 
-        The default implementation will return the previous focusable component (as
-        determined by FocusTraverser) that also wants keyboard focus, or nullptr if
-        there is no suitable component.
+        The default implementation will just return the foremost child component that
+        wants focus.
+
+        This may return nullptr if there's no suitable candidate.
     */
-    Component* getPreviousComponent (Component* current) override;
-
-    /** Returns all of the components that can receive keyboard focus within the given
-        parent component in traversal order.
-
-        The default implementation will return all focusable child components (as
-        determined by FocusTraverser) that also wants keyboard focus.
-    */
-    std::vector<Component*> getAllComponents (Component* parentComponent) override;
+    virtual Component* getDefaultComponent (Component* parentComponent);
 };
 
 } // namespace juce

@@ -1,22 +1,18 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework examples.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE examples.
+   Copyright (c) 2020 - Raw Material Software Limited
 
    The code included in this file is provided under the terms of the ISC license
    http://www.isc.org/downloads/software-support-policy/isc-license. Permission
-   to use, copy, modify, and/or distribute this software for any purpose with or
+   To use, copy, modify, and/or distribute this software for any purpose with or
    without fee is hereby granted provided that the above copyright notice and
    this permission notice appear in all copies.
 
-   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-   REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-   AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-   INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-   LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-   OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-   PERFORMANCE OF THIS SOFTWARE.
+   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES,
+   WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR
+   PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -35,7 +31,7 @@
 
  dependencies:     juce_core, juce_data_structures, juce_events, juce_graphics,
                    juce_gui_basics, juce_gui_extra, juce_opengl
- exporters:        xcode_mac, vs2022, linux_make, androidstudio, xcode_iphone
+ exporters:        xcode_mac, vs2019, linux_make, androidstudio, xcode_iphone
 
  moduleFlags:      JUCE_STRICT_REFCOUNTEDPOINTER=1
 
@@ -73,62 +69,57 @@ struct OpenGLUtils
     // This class just manages the attributes that the demo shaders use.
     struct Attributes
     {
-        explicit Attributes (OpenGLShaderProgram& shader)
+        Attributes (OpenGLContext& openGLContext, OpenGLShaderProgram& shader)
         {
-            position      .reset (createAttribute (shader, "position"));
-            normal        .reset (createAttribute (shader, "normal"));
-            sourceColour  .reset (createAttribute (shader, "sourceColour"));
-            textureCoordIn.reset (createAttribute (shader, "textureCoordIn"));
+            position      .reset (createAttribute (openGLContext, shader, "position"));
+            normal        .reset (createAttribute (openGLContext, shader, "normal"));
+            sourceColour  .reset (createAttribute (openGLContext, shader, "sourceColour"));
+            textureCoordIn.reset (createAttribute (openGLContext, shader, "textureCoordIn"));
         }
 
-        void enable()
+        void enable (OpenGLContext& openGLContext)
         {
-            using namespace ::juce::gl;
-
             if (position.get() != nullptr)
             {
-                glVertexAttribPointer (position->attributeID, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), nullptr);
-                glEnableVertexAttribArray (position->attributeID);
+                openGLContext.extensions.glVertexAttribPointer (position->attributeID, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), nullptr);
+                openGLContext.extensions.glEnableVertexAttribArray (position->attributeID);
             }
 
             if (normal.get() != nullptr)
             {
-                glVertexAttribPointer (normal->attributeID, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 3));
-                glEnableVertexAttribArray (normal->attributeID);
+                openGLContext.extensions.glVertexAttribPointer (normal->attributeID, 3, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 3));
+                openGLContext.extensions.glEnableVertexAttribArray (normal->attributeID);
             }
 
             if (sourceColour.get() != nullptr)
             {
-                glVertexAttribPointer (sourceColour->attributeID, 4, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 6));
-                glEnableVertexAttribArray (sourceColour->attributeID);
+                openGLContext.extensions.glVertexAttribPointer (sourceColour->attributeID, 4, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 6));
+                openGLContext.extensions.glEnableVertexAttribArray (sourceColour->attributeID);
             }
 
             if (textureCoordIn.get() != nullptr)
             {
-                glVertexAttribPointer (textureCoordIn->attributeID, 2, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 10));
-                glEnableVertexAttribArray (textureCoordIn->attributeID);
+                openGLContext.extensions.glVertexAttribPointer (textureCoordIn->attributeID, 2, GL_FLOAT, GL_FALSE, sizeof (Vertex), (GLvoid*) (sizeof (float) * 10));
+                openGLContext.extensions.glEnableVertexAttribArray (textureCoordIn->attributeID);
             }
         }
 
-        void disable()
+        void disable (OpenGLContext& openGLContext)
         {
-            using namespace ::juce::gl;
-
-            if (position != nullptr)        glDisableVertexAttribArray (position->attributeID);
-            if (normal != nullptr)          glDisableVertexAttribArray (normal->attributeID);
-            if (sourceColour != nullptr)    glDisableVertexAttribArray (sourceColour->attributeID);
-            if (textureCoordIn != nullptr)  glDisableVertexAttribArray (textureCoordIn->attributeID);
+            if (position.get() != nullptr)        openGLContext.extensions.glDisableVertexAttribArray (position->attributeID);
+            if (normal.get() != nullptr)          openGLContext.extensions.glDisableVertexAttribArray (normal->attributeID);
+            if (sourceColour.get() != nullptr)    openGLContext.extensions.glDisableVertexAttribArray (sourceColour->attributeID);
+            if (textureCoordIn.get() != nullptr)  openGLContext.extensions.glDisableVertexAttribArray (textureCoordIn->attributeID);
         }
 
         std::unique_ptr<OpenGLShaderProgram::Attribute> position, normal, sourceColour, textureCoordIn;
 
     private:
-        static OpenGLShaderProgram::Attribute* createAttribute (OpenGLShaderProgram& shader,
+        static OpenGLShaderProgram::Attribute* createAttribute (OpenGLContext& openGLContext,
+                                                                OpenGLShaderProgram& shader,
                                                                 const char* attributeName)
         {
-            using namespace ::juce::gl;
-
-            if (glGetAttribLocation (shader.getProgramID(), attributeName) < 0)
+            if (openGLContext.extensions.glGetAttribLocation (shader.getProgramID(), attributeName) < 0)
                 return nullptr;
 
             return new OpenGLShaderProgram::Attribute (shader, attributeName);
@@ -139,24 +130,23 @@ struct OpenGLUtils
     // This class just manages the uniform values that the demo shaders use.
     struct Uniforms
     {
-        explicit Uniforms (OpenGLShaderProgram& shader)
+        Uniforms (OpenGLContext& openGLContext, OpenGLShaderProgram& shader)
         {
-            projectionMatrix.reset (createUniform (shader, "projectionMatrix"));
-            viewMatrix      .reset (createUniform (shader, "viewMatrix"));
-            texture         .reset (createUniform (shader, "demoTexture"));
-            lightPosition   .reset (createUniform (shader, "lightPosition"));
-            bouncingNumber  .reset (createUniform (shader, "bouncingNumber"));
+            projectionMatrix.reset (createUniform (openGLContext, shader, "projectionMatrix"));
+            viewMatrix      .reset (createUniform (openGLContext, shader, "viewMatrix"));
+            texture         .reset (createUniform (openGLContext, shader, "demoTexture"));
+            lightPosition   .reset (createUniform (openGLContext, shader, "lightPosition"));
+            bouncingNumber  .reset (createUniform (openGLContext, shader, "bouncingNumber"));
         }
 
         std::unique_ptr<OpenGLShaderProgram::Uniform> projectionMatrix, viewMatrix, texture, lightPosition, bouncingNumber;
 
     private:
-        static OpenGLShaderProgram::Uniform* createUniform (OpenGLShaderProgram& shader,
+        static OpenGLShaderProgram::Uniform* createUniform (OpenGLContext& openGLContext,
+                                                            OpenGLShaderProgram& shader,
                                                             const char* uniformName)
         {
-            using namespace ::juce::gl;
-
-            if (glGetUniformLocation (shader.getProgramID(), uniformName) < 0)
+            if (openGLContext.extensions.glGetUniformLocation (shader.getProgramID(), uniformName) < 0)
                 return nullptr;
 
             return new OpenGLShaderProgram::Uniform (shader, uniformName);
@@ -169,69 +159,62 @@ struct OpenGLUtils
     */
     struct Shape
     {
-        Shape()
+        Shape (OpenGLContext& openGLContext)
         {
             if (shapeFile.load (loadEntireAssetIntoString ("teapot.obj")).wasOk())
                 for (auto* s : shapeFile.shapes)
-                    vertexBuffers.add (new VertexBuffer (*s));
+                    vertexBuffers.add (new VertexBuffer (openGLContext, *s));
         }
 
-        void draw (Attributes& attributes)
+        void draw (OpenGLContext& openGLContext, Attributes& attributes)
         {
-            using namespace ::juce::gl;
-
             for (auto* vertexBuffer : vertexBuffers)
             {
                 vertexBuffer->bind();
 
-                attributes.enable();
+                attributes.enable (openGLContext);
                 glDrawElements (GL_TRIANGLES, vertexBuffer->numIndices, GL_UNSIGNED_INT, nullptr);
-                attributes.disable();
+                attributes.disable (openGLContext);
             }
         }
 
     private:
         struct VertexBuffer
         {
-            explicit VertexBuffer (WavefrontObjFile::Shape& shape)
+            VertexBuffer (OpenGLContext& context, WavefrontObjFile::Shape& shape) : openGLContext (context)
             {
-                using namespace ::juce::gl;
-
                 numIndices = shape.mesh.indices.size();
 
-                glGenBuffers (1, &vertexBuffer);
-                glBindBuffer (GL_ARRAY_BUFFER, vertexBuffer);
+                openGLContext.extensions.glGenBuffers (1, &vertexBuffer);
+                openGLContext.extensions.glBindBuffer (GL_ARRAY_BUFFER, vertexBuffer);
 
                 Array<Vertex> vertices;
                 createVertexListFromMesh (shape.mesh, vertices, Colours::green);
 
-                glBufferData (GL_ARRAY_BUFFER, vertices.size() * (int) sizeof (Vertex),
-                              vertices.getRawDataPointer(), GL_STATIC_DRAW);
+                openGLContext.extensions.glBufferData (GL_ARRAY_BUFFER, vertices.size() * (int) sizeof (Vertex),
+                                                       vertices.getRawDataPointer(), GL_STATIC_DRAW);
 
-                glGenBuffers (1, &indexBuffer);
-                glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
-                glBufferData (GL_ELEMENT_ARRAY_BUFFER, numIndices * (int) sizeof (juce::uint32),
+                openGLContext.extensions.glGenBuffers (1, &indexBuffer);
+                openGLContext.extensions.glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+                openGLContext.extensions.glBufferData (GL_ELEMENT_ARRAY_BUFFER, numIndices * (int) sizeof (juce::uint32),
                                                        shape.mesh.indices.getRawDataPointer(), GL_STATIC_DRAW);
             }
 
             ~VertexBuffer()
             {
-                using namespace ::juce::gl;
-
-                glDeleteBuffers (1, &vertexBuffer);
-                glDeleteBuffers (1, &indexBuffer);
+                openGLContext.extensions.glDeleteBuffers (1, &vertexBuffer);
+                openGLContext.extensions.glDeleteBuffers (1, &indexBuffer);
             }
 
             void bind()
             {
-                using namespace ::juce::gl;
-
-                glBindBuffer (GL_ARRAY_BUFFER, vertexBuffer);
-                glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
+                openGLContext.extensions.glBindBuffer (GL_ARRAY_BUFFER, vertexBuffer);
+                openGLContext.extensions.glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
             }
 
             GLuint vertexBuffer, indexBuffer;
             int numIndices;
+            OpenGLContext& openGLContext;
 
             JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VertexBuffer)
         };
@@ -650,7 +633,7 @@ struct OpenGLUtils
         String name;
     };
 
-    struct DynamicTexture final : public DemoTexture
+    struct DynamicTexture   : public DemoTexture
     {
         DynamicTexture() { name = "Dynamically-generated texture"; }
 
@@ -680,6 +663,10 @@ struct OpenGLUtils
                 g.setColour (Colours::black);
                 g.setFont (40);
 
+                const MessageManagerLock mml (ThreadPoolJob::getCurrentThreadPoolJob());
+                if (! mml.lockWasGained())
+                    return false;
+
                 g.drawFittedText (String (Time::getCurrentTime().getMilliseconds()), image.getBounds(), Justification::centred, 1);
             }
 
@@ -697,7 +684,7 @@ struct OpenGLUtils
         return image;
     }
 
-    struct BuiltInTexture final : public DemoTexture
+    struct BuiltInTexture   : public DemoTexture
     {
         BuiltInTexture (const char* nm, const void* imageData, size_t imageSize)
             : image (resizeImageToPowerOfTwo (ImageFileFormat::loadFrom (imageData, imageSize)))
@@ -714,7 +701,7 @@ struct OpenGLUtils
         }
     };
 
-    struct TextureFromFile final : public DemoTexture
+    struct TextureFromFile   : public DemoTexture
     {
         TextureFromFile (const File& file)
         {
@@ -731,7 +718,7 @@ struct OpenGLUtils
         }
     };
 
-    struct TextureFromAsset final : public DemoTexture
+    struct TextureFromAsset   : public DemoTexture
     {
         TextureFromAsset (const char* assetName)
         {
@@ -753,9 +740,9 @@ struct OpenGLUtils
 /** This is the main demo component - the GL context gets attached to it, and
     it implements the OpenGLRenderer callback so that it can do real GL work.
 */
-class OpenGLDemo final : public Component,
-                         private OpenGLRenderer,
-                         private AsyncUpdater
+class OpenGLDemo  : public Component,
+                    private OpenGLRenderer,
+                    private AsyncUpdater
 {
 public:
     OpenGLDemo()
@@ -767,7 +754,6 @@ public:
         controlsOverlay.reset (new DemoControlsOverlay (*this));
         addAndMakeVisible (controlsOverlay.get());
 
-        openGLContext.setOpenGLVersionRequired (OpenGLContext::openGL3_2);
         openGLContext.setRenderer (this);
         openGLContext.attachTo (*this);
         openGLContext.setContinuousRepainting (true);
@@ -788,7 +774,7 @@ public:
         // on demand, during the render callback.
         freeAllContextObjects();
 
-        if (controlsOverlay != nullptr)
+        if (controlsOverlay.get() != nullptr)
             controlsOverlay->updateShader();
     }
 
@@ -815,10 +801,6 @@ public:
     // to do your GL rendering.
     void renderOpenGL() override
     {
-        using namespace ::juce::gl;
-
-        const ScopedLock lock (mutex);
-
         jassert (OpenGLHelpers::isContextActive());
 
         auto desktopScale = (float) openGLContext.getRenderingScale();
@@ -845,14 +827,10 @@ public:
         glDepthFunc (GL_LESS);
         glEnable (GL_BLEND);
         glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glActiveTexture (GL_TEXTURE0);
+        openGLContext.extensions.glActiveTexture (GL_TEXTURE0);
+        glEnable (GL_TEXTURE_2D);
 
-        if (! openGLContext.isCoreProfile())
-            glEnable (GL_TEXTURE_2D);
-
-        glViewport (0, 0,
-                    roundToInt (desktopScale * (float) bounds.getWidth()),
-                    roundToInt (desktopScale * (float) bounds.getHeight()));
+        glViewport (0, 0, roundToInt (desktopScale * (float) getWidth()), roundToInt (desktopScale * (float) getHeight()));
 
         texture.bind();
 
@@ -861,49 +839,47 @@ public:
 
         shader->use();
 
-        if (uniforms->projectionMatrix != nullptr)
+        if (uniforms->projectionMatrix.get() != nullptr)
             uniforms->projectionMatrix->setMatrix4 (getProjectionMatrix().mat, 1, false);
 
-        if (uniforms->viewMatrix != nullptr)
+        if (uniforms->viewMatrix.get() != nullptr)
             uniforms->viewMatrix->setMatrix4 (getViewMatrix().mat, 1, false);
 
-        if (uniforms->texture != nullptr)
+        if (uniforms->texture.get() != nullptr)
             uniforms->texture->set ((GLint) 0);
 
-        if (uniforms->lightPosition != nullptr)
+        if (uniforms->lightPosition.get() != nullptr)
             uniforms->lightPosition->set (-15.0f, 10.0f, 15.0f, 0.0f);
 
-        if (uniforms->bouncingNumber != nullptr)
+        if (uniforms->bouncingNumber.get() != nullptr)
             uniforms->bouncingNumber->set (bouncingNumber.getValue());
 
-        shape->draw (*attributes);
+        shape->draw (openGLContext, *attributes);
 
         // Reset the element buffers so child Components draw correctly
-        glBindBuffer (GL_ARRAY_BUFFER, 0);
-        glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
+        openGLContext.extensions.glBindBuffer (GL_ARRAY_BUFFER, 0);
+        openGLContext.extensions.glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
 
-        if (! controlsOverlay->isMouseButtonDownThreadsafe())
+        if (! controlsOverlay->isMouseButtonDown())
             rotation += (float) rotationSpeed;
     }
 
     Matrix3D<float> getProjectionMatrix() const
     {
-        const ScopedLock lock (mutex);
-
         auto w = 1.0f / (scale + 0.1f);
-        auto h = w * bounds.toFloat().getAspectRatio (false);
+        auto h = w * getLocalBounds().toFloat().getAspectRatio (false);
 
         return Matrix3D<float>::fromFrustum (-w, w, -h, h, 4.0f, 30.0f);
     }
 
     Matrix3D<float> getViewMatrix() const
     {
-        const ScopedLock lock (mutex);
+        auto viewMatrix = draggableOrientation.getRotationMatrix()
+                             * Vector3D<float> (0.0f, 1.0f, -10.0f);
 
-        auto viewMatrix = Matrix3D<float>::fromTranslation ({ 0.0f, 1.0f, -10.0f }) * draggableOrientation.getRotationMatrix();
         auto rotationMatrix = Matrix3D<float>::rotation ({ rotation, rotation, -0.3f });
 
-        return viewMatrix * rotationMatrix;
+        return rotationMatrix * viewMatrix;
     }
 
     void setTexture (OpenGLUtils::DemoTexture* t)
@@ -913,7 +889,6 @@ public:
 
     void setShaderProgram (const String& vertexShader, const String& fragmentShader)
     {
-        const ScopedLock lock (shaderMutex); // Prevent concurrent access to shader strings and status
         newVertexShader = vertexShader;
         newFragmentShader = fragmentShader;
     }
@@ -922,24 +897,18 @@ public:
 
     void resized() override
     {
-        const ScopedLock lock (mutex);
-
-        bounds = getLocalBounds();
-        controlsOverlay->setBounds (bounds);
-        draggableOrientation.setViewport (bounds);
+        controlsOverlay->setBounds (getLocalBounds());
+        draggableOrientation.setViewport (getLocalBounds());
     }
 
-    Rectangle<int> bounds;
     Draggable3DOrientation draggableOrientation;
     bool doBackgroundDrawing = false;
     float scale = 0.5f, rotationSpeed = 0.0f;
     BouncingNumber bouncingNumber;
-    CriticalSection mutex;
 
 private:
     void handleAsyncUpdate() override
     {
-        const ScopedLock lock (shaderMutex); // Prevent concurrent access to shader strings and status
         controlsOverlay->statusLabel.setText (statusText, dontSendNotification);
     }
 
@@ -947,25 +916,25 @@ private:
     {
         // Create an OpenGLGraphicsContext that will draw into this GL window..
         std::unique_ptr<LowLevelGraphicsContext> glRenderer (createOpenGLGraphicsContext (openGLContext,
-                                                                                          roundToInt (desktopScale * (float) bounds.getWidth()),
-                                                                                          roundToInt (desktopScale * (float) bounds.getHeight())));
+                                                                                          roundToInt (desktopScale * (float) getWidth()),
+                                                                                          roundToInt (desktopScale * (float) getHeight())));
 
         if (glRenderer.get() != nullptr)
         {
             Graphics g (*glRenderer);
             g.addTransform (AffineTransform::scale (desktopScale));
 
-            for (const auto& s : stars)
+            for (auto s : stars)
             {
                 auto size = 0.25f;
 
                 // This stuff just creates a spinning star shape and fills it..
                 Path p;
-                p.addStar ({ (float) bounds.getWidth()  * s.x.getValue(),
-                             (float) bounds.getHeight() * s.y.getValue() },
+                p.addStar ({ (float) getWidth()  * s.x.getValue(),
+                             (float) getHeight() * s.y.getValue() },
                            7,
-                           (float) bounds.getHeight() * size * 0.5f,
-                           (float) bounds.getHeight() * size,
+                           (float) getHeight() * size * 0.5f,
+                           (float) getHeight() * size,
                            s.angle.getValue());
 
                 auto hue = s.hue.getValue();
@@ -973,7 +942,7 @@ private:
                 g.setGradientFill (ColourGradient (Colours::green.withRotatedHue (hue).withAlpha (0.8f),
                                                    0, 0,
                                                    Colours::red.withRotatedHue (hue).withAlpha (0.5f),
-                                                   0, (float) bounds.getHeight(), false));
+                                                   0, (float) getHeight(), false));
                 g.fillPath (p);
             }
         }
@@ -986,10 +955,10 @@ private:
         This component sits on top of the main GL demo, and contains all the sliders
         and widgets that control things.
     */
-    class DemoControlsOverlay final : public Component,
-                                      private CodeDocument::Listener,
-                                      private Slider::Listener,
-                                      private Timer
+    class DemoControlsOverlay  : public Component,
+                                 private CodeDocument::Listener,
+                                 private Slider::Listener,
+                                 private Timer
     {
     public:
         DemoControlsOverlay (OpenGLDemo& d)
@@ -997,7 +966,7 @@ private:
         {
             addAndMakeVisible (statusLabel);
             statusLabel.setJustificationType (Justification::topLeft);
-            statusLabel.setFont (FontOptions (14.0f));
+            statusLabel.setFont (Font (14.0f));
 
             addAndMakeVisible (sizeSlider);
             sizeSlider.setRange (0.0, 1.0, 0.001);
@@ -1048,12 +1017,12 @@ private:
 
             addAndMakeVisible (textureLabel);
             textureLabel.attachToComponent (&textureBox, true);
+
+            lookAndFeelChanged();
         }
 
         void initialise()
         {
-            lookAndFeelChanged();
-
             showBackgroundToggle.setToggleState (false, sendNotification);
             textureBox.setSelectedItemIndex (0);
             presetBox .setSelectedItemIndex (0);
@@ -1087,25 +1056,14 @@ private:
             tabbedComp.setBounds (shaderArea);
         }
 
-        bool isMouseButtonDownThreadsafe() const { return buttonDown; }
-
         void mouseDown (const MouseEvent& e) override
         {
-            const ScopedLock lock (demo.mutex);
             demo.draggableOrientation.mouseDown (e.getPosition());
-
-            buttonDown = true;
         }
 
         void mouseDrag (const MouseEvent& e) override
         {
-            const ScopedLock lock (demo.mutex);
             demo.draggableOrientation.mouseDrag (e.getPosition());
-        }
-
-        void mouseUp (const MouseEvent&) override
-        {
-            buttonDown = false;
         }
 
         void mouseWheelMove (const MouseEvent&, const MouseWheelDetails& d) override
@@ -1120,8 +1078,7 @@ private:
 
         void selectPreset (int preset)
         {
-            const auto presets = OpenGLUtils::getPresets();
-            const auto& p = presets[preset];
+            const auto& p = OpenGLUtils::getPresets()[preset];
 
             vertexDocument  .replaceAllContent (p.vertexShader);
             fragmentDocument.replaceAllContent (p.fragmentShader);
@@ -1131,25 +1088,25 @@ private:
 
         void selectTexture (int itemID)
         {
+           #if JUCE_MODAL_LOOPS_PERMITTED
             if (itemID == 1000)
             {
-                textureFileChooser = std::make_unique<FileChooser> ("Choose an image to open...",
-                                                                    File::getSpecialLocation (File::userPicturesDirectory),
-                                                                    "*.jpg;*.jpeg;*.png;*.gif");
-                auto chooserFlags = FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles;
+                auto lastLocation = File::getSpecialLocation (File::userPicturesDirectory);
 
-                textureFileChooser->launchAsync (chooserFlags, [this] (const FileChooser& fc)
+                FileChooser fc ("Choose an image to open...", lastLocation, "*.jpg;*.jpeg;*.png;*.gif");
+
+                if (fc.browseForFileToOpen())
                 {
-                    if (fc.getResult() == File{})
-                        return;
+                    lastLocation = fc.getResult();
 
                     textures.add (new OpenGLUtils::TextureFromFile (fc.getResult()));
                     updateTexturesList();
 
                     textureBox.setSelectedId (textures.size());
-                });
+                }
             }
             else
+           #endif
             {
                 if (auto* t = textures[itemID - 1])
                     demo.setTexture (t);
@@ -1163,8 +1120,10 @@ private:
             for (int i = 0; i < textures.size(); ++i)
                 textureBox.addItem (textures.getUnchecked (i)->name, i + 1);
 
+           #if JUCE_MODAL_LOOPS_PERMITTED
             textureBox.addSeparator();
             textureBox.addItem ("Load from a file...", 1000);
+           #endif
         }
 
         void updateShader()
@@ -1177,8 +1136,6 @@ private:
     private:
         void sliderValueChanged (Slider*) override
         {
-            const ScopedLock lock (demo.mutex);
-
             demo.scale         = (float) sizeSlider .getValue();
             demo.rotationSpeed = (float) speedSlider.getValue();
         }
@@ -1236,10 +1193,6 @@ private:
 
         OwnedArray<OpenGLUtils::DemoTexture> textures;
 
-        std::unique_ptr<FileChooser> textureFileChooser;
-
-        std::atomic<bool> buttonDown { false };
-
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoControlsOverlay)
     };
 
@@ -1256,7 +1209,6 @@ private:
     OpenGLUtils::DemoTexture* textureToUse = nullptr;
     OpenGLUtils::DemoTexture* lastTexture  = nullptr;
 
-    CriticalSection shaderMutex;
     String newVertexShader, newFragmentShader, statusText;
 
     struct BackgroundStar
@@ -1269,8 +1221,6 @@ private:
     //==============================================================================
     void updateShader()
     {
-        const ScopedLock lock (shaderMutex); // Prevent concurrent access to shader strings and status
-
         if (newVertexShader.isNotEmpty() || newFragmentShader.isNotEmpty())
         {
             std::unique_ptr<OpenGLShaderProgram> newShader (new OpenGLShaderProgram (openGLContext));
@@ -1286,9 +1236,9 @@ private:
                 shader.reset (newShader.release());
                 shader->use();
 
-                shape     .reset (new OpenGLUtils::Shape());
-                attributes.reset (new OpenGLUtils::Attributes (*shader));
-                uniforms  .reset (new OpenGLUtils::Uniforms   (*shader));
+                shape     .reset (new OpenGLUtils::Shape      (openGLContext));
+                attributes.reset (new OpenGLUtils::Attributes (openGLContext, *shader));
+                uniforms  .reset (new OpenGLUtils::Uniforms   (openGLContext, *shader));
 
                 statusText = "GLSL: v" + String (OpenGLShaderProgram::getLanguageVersion(), 2);
             }

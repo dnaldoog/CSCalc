@@ -1,22 +1,18 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework examples.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE examples.
+   Copyright (c) 2020 - Raw Material Software Limited
 
    The code included in this file is provided under the terms of the ISC license
    http://www.isc.org/downloads/software-support-policy/isc-license. Permission
-   to use, copy, modify, and/or distribute this software for any purpose with or
+   To use, copy, modify, and/or distribute this software for any purpose with or
    without fee is hereby granted provided that the above copyright notice and
    this permission notice appear in all copies.
 
-   THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
-   REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
-   AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
-   INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-   LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-   OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-   PERFORMANCE OF THIS SOFTWARE.
+   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES,
+   WHETHER EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR
+   PURPOSE, ARE DISCLAIMED.
 
   ==============================================================================
 */
@@ -35,7 +31,7 @@
 
  dependencies:     juce_core, juce_data_structures, juce_events, juce_graphics,
                    juce_gui_basics, juce_gui_extra
- exporters:        xcode_mac, vs2022, linux_make, androidstudio, xcode_iphone
+ exporters:        xcode_mac, vs2019, linux_make, androidstudio, xcode_iphone
 
  moduleFlags:      JUCE_STRICT_REFCOUNTEDPOINTER=1
 
@@ -58,7 +54,7 @@
     is enabled. It contains an icon that can be used to show the side panel containing
     the menu.
 */
-struct BurgerMenuHeader final : public Component
+struct BurgerMenuHeader  : public Component
 {
     BurgerMenuHeader (SidePanel& sp)
         : sidePanel (sp)
@@ -106,7 +102,7 @@ private:
 
         burgerButton.setBounds (r.removeFromRight (40).withSizeKeepingCentre (20, 20));
 
-        titleLabel.setFont (FontOptions ((float) getHeight() * 0.5f, Font::plain));
+        titleLabel.setFont (Font ((float) getHeight() * 0.5f, Font::plain));
         titleLabel.setBounds (r);
     }
 
@@ -124,9 +120,9 @@ private:
 };
 
 //==============================================================================
-class MenusDemo final : public Component,
-                        public ApplicationCommandTarget,
-                        public MenuBarModel
+class MenusDemo    : public Component,
+                     public ApplicationCommandTarget,
+                     public MenuBarModel
 {
 public:
     //==============================================================================
@@ -161,10 +157,6 @@ public:
         setApplicationCommandManagerToWatch (&commandManager);
         commandManager.registerAllCommandsForTarget (this);
 
-        // this ensures that commands invoked on the DemoRunner application are correctly
-        // forwarded to this demo
-        commandManager.setFirstCommandTarget (this);
-
         // this lets the command manager use keypresses that arrive in our window to send out commands
         addKeyListener (commandManager.getKeyMappings());
 
@@ -182,8 +174,6 @@ public:
        #if JUCE_MAC
         MenuBarModel::setMacMainMenu (nullptr);
        #endif
-
-        commandManager.setFirstCommandTarget (nullptr);
     }
 
     void resized() override
@@ -326,11 +316,7 @@ public:
     }
 
 private:
-   #if JUCE_DEMO_RUNNER
-    ApplicationCommandManager& commandManager = getGlobalCommandManager();
-   #else
     ApplicationCommandManager commandManager;
-   #endif
 
     std::unique_ptr<MenuBarComponent> menuBar;
     MenuBarPosition menuBarPosition = MenuBarPosition::window;
@@ -345,8 +331,8 @@ private:
         Command messages that aren't handled in the main component will be passed
         to this class to respond to.
     */
-    class OuterCommandTarget final : public Component,
-                                     public ApplicationCommandTarget
+    class OuterCommandTarget    : public Component,
+                                  public ApplicationCommandTarget
     {
     public:
         OuterCommandTarget (ApplicationCommandManager& m)
@@ -434,8 +420,8 @@ private:
             Command messages that aren't handled in the OuterCommandTarget will be passed
             to this class to respond to.
         */
-        struct InnerCommandTarget final : public Component,
-                                          public ApplicationCommandTarget
+        struct InnerCommandTarget    : public Component,
+                                       public ApplicationCommandTarget
         {
             InnerCommandTarget (ApplicationCommandManager& m)
                 : commandManager (m)

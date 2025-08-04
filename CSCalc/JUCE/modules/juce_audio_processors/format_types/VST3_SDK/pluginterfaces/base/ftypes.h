@@ -18,8 +18,6 @@
 
 #include "fplatform.h"
 
-#include <cstdint>
-
 //#define UNICODE_OFF 	// disable / enable unicode
 
 #ifdef UNICODE_OFF
@@ -39,26 +37,38 @@ namespace Steinberg
 //-----------------------------------------------------------------
 // Integral Types
 	typedef char int8;
-	typedef uint8_t uint8;
+	typedef unsigned char uint8;
 	typedef unsigned char uchar;
 
-	typedef int16_t int16;
-	typedef uint16_t uint16;
+	typedef short int16;
+	typedef unsigned short uint16;
 
-	typedef int32_t int32;
-	typedef uint32_t uint32;
+#if SMTG_OS_WINDOWS && !defined(__GNUC__)
+	typedef long int32;
+	typedef unsigned long uint32;
+#else
+	typedef int int32;
+	typedef unsigned int uint32;
+#endif
 
-	static const int32 kMaxInt32 = INT32_MAX;
-	static const int32 kMinInt32 = INT32_MIN;
-	static const int32 kMaxLong = kMaxInt32;
-	static const int32 kMinLong = kMinInt32;
-	static const uint32 kMaxInt32u = UINT32_MAX;
+	static const int32 kMaxLong = 0x7fffffff;
+	static const int32 kMinLong = (-0x7fffffff - 1);
+	static const int32 kMaxInt32 = kMaxLong;
+	static const int32 kMinInt32 = kMinLong;
+	static const uint32 kMaxInt32u = 0xffffffff;
 
-	typedef int64_t int64;
-	typedef uint64_t uint64;
-	static const int64 kMaxInt64 = INT64_MAX;
-	static const int64 kMinInt64 = INT64_MIN;
-	static const uint64 kMaxInt64u = UINT64_MAX;
+#if SMTG_OS_WINDOWS && !defined(__GNUC__)
+	typedef __int64 int64;
+	typedef unsigned __int64 uint64;
+	static const int64 kMaxInt64 = 9223372036854775807i64;
+	static const int64 kMinInt64 = (-9223372036854775807i64 - 1);
+#else
+	typedef long long int64;
+	typedef unsigned long long uint64;
+	static const int64 kMaxInt64 = 0x7fffffffffffffffLL;
+	static const int64 kMinInt64 = (-0x7fffffffffffffffLL-1);
+#endif
+	static const uint64 kMaxInt64u = uint64 (0xffffffff) | (uint64 (0xffffffff) << 32);
 
 //-----------------------------------------------------------------
 // other Semantic Types
@@ -81,7 +91,13 @@ namespace Steinberg
 //------------------------------------------------------------------
 // Char / Strings
 	typedef char char8;
+#ifdef _NATIVE_WCHAR_T_DEFINED
+	typedef __wchar_t char16;
+#elif SMTG_CPP11
 	typedef char16_t char16;
+#else
+	typedef int16 char16;
+#endif
 
 #ifdef UNICODE
 	typedef char16 tchar;
@@ -117,12 +133,12 @@ namespace Steinberg
 	typedef int32 UCoord;
 	static const UCoord kMaxCoord = ((UCoord)0x7FFFFFFF);
 	static const UCoord kMinCoord = ((UCoord)-0x7FFFFFFF);
-} // namespace Steinberg
+}	// namespace Steinberg
 
 
 //----------------------------------------------------------------------------
-/** Byte-order Conversion Macros 
-*/
+/** Byte-order Conversion Macros */
+//----------------------------------------------------------------------------
 #define SWAP_32(l) { \
 	unsigned char* p = (unsigned char*)& (l); \
 	unsigned char t; \
@@ -154,7 +170,7 @@ namespace Steinberg
 // always inline macros (only when RELEASE is 1)
 //----------------------------------------------------------------------------
 #if RELEASE
-    #if SMTG_OS_MACOS || SMTG_OS_LINUX || defined(__MINGW32__)
+    #if SMTG_OS_MACOS || SMTG_OS_LINUX
 		#define SMTG_ALWAYS_INLINE	__inline__ __attribute__((__always_inline__))
 		#define SMTG_NEVER_INLINE __attribute__((noinline))
 	#elif SMTG_OS_WINDOWS

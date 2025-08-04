@@ -9,7 +9,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2024, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2019, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,17 +45,9 @@
 #include <cstdio>
 #include <cstdarg>
 #include <utility>
-#include <complex>
-#include <cmath>
-#include <algorithm>
-#include <cassert>
 
 #if SMTG_OS_WINDOWS
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 #include <windows.h>
-#ifdef _MSC_VER
 #pragma warning (disable : 4244)
 #pragma warning (disable : 4267)
 #pragma warning (disable : 4996)
@@ -67,9 +59,9 @@
 #define realloc(p,s) _realloc_dbg(p,s,  _NORMAL_BLOCK, __FILE__, __LINE__)
 #define free(p) _free_dbg(p, _NORMAL_BLOCK)
 
-#endif // DEVELOPMENT
-#endif // _MSC_VER
-#endif // SMTG_OS_WINDOWS
+#endif
+
+#endif
 
 #ifndef kPrintfBufferSize
 #define kPrintfBufferSize 4096
@@ -183,7 +175,7 @@ static CFStringDebugAllocator gDebugAllocator;
 #else
 
 static const CFAllocatorRef kCFAllocator = ::kCFAllocatorDefault;
-#endif // SMTG_DEBUG_CFALLOCATOR
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -209,32 +201,34 @@ static bool fromCFStringRef (Steinberg::char8* dest, Steinberg::int32 destSize, 
 #endif // SMTG_OS_MACOS
 
 #if SMTG_OS_WINDOWS
-//-----------------------------------------------------------------------------
-static inline int stricmp16 (const Steinberg::tchar* s1, const Steinberg::tchar* s2)
-{
-	return wcsicmp (Steinberg::wscast (s1), Steinberg::wscast (s2));
-}
+#define stricmp16 wcsicmp
+#define strnicmp16 wcsnicmp
+#define strrchr16 wcsrchr
+#define sprintf16 swprintf
+#define snprintf16 snwprintf
+#define vsnprintf16 vsnwprintf
+#define vsprintf16 wvsprintf
+#define vfprintf16 vfwprintf
+#define sscanf16 swscanf
+#define toupper16 towupper
+#define tolower16 towlower
+#define isupper16 iswupper
+#define islower16 iswlower
+#define isspace16 iswspace
+#define isalpha16 iswalpha
+#define isdigit16 iswdigit
+#define isalnum16 iswalnum
 
-//-----------------------------------------------------------------------------
-static inline int strnicmp16 (const Steinberg::tchar* s1, const Steinberg::tchar* s2, size_t l)
-{
-	return wcsnicmp (Steinberg::wscast (s1), Steinberg::wscast (s2), l);
-}
+#define stricmp _stricmp
+#define strnicmp _strnicmp
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#define snwprintf _snwprintf
+#define vsnwprintf _vsnwprintf
 
-//-----------------------------------------------------------------------------
-static inline int vsnwprintf (Steinberg::char16* buffer, size_t bufferSize,
-                              const Steinberg::char16* format, va_list args)
-{
-	return _vsnwprintf (Steinberg::wscast (buffer), bufferSize, Steinberg::wscast (format), args);
-}
-
-//-----------------------------------------------------------------------------
-static inline Steinberg::int32 sprintf16 (Steinberg::char16* str, const Steinberg::char16* format, ...)
-{
-	va_list marker;
-	va_start (marker, format);
-	return vsnwprintf (str, static_cast<size_t> (-1), format, marker);
-}
+#define wtoi _wtoi
+#define wtol _wtol
+#define wtof _wtof
 
 #elif SMTG_OS_LINUX
 #include <codecvt>
@@ -293,7 +287,7 @@ static inline int strnicmp16 (const Steinberg::char16* s1, const Steinberg::char
 //-----------------------------------------------------------------------------
 static inline int sprintf16 (Steinberg::char16* wcs, const Steinberg::char16* format, ...)
 {
-	assert (false && "DEPRECATED No Linux implementation");
+    assert(false && "DEPRECATED No Linux implementation");
 	return 0;
 }
 
@@ -316,7 +310,7 @@ static inline int vsnwprintf (Steinberg::char16* wcs, size_t maxlen,
 //-----------------------------------------------------------------------------
 static inline Steinberg::char16* strrchr16 (const Steinberg::char16* str, Steinberg::char16 c)
 {
-	assert (false && "DEPRECATED No Linux implementation");
+    assert(false && "DEPRECATED No Linux implementation");
 	return nullptr;
 }
 
@@ -333,7 +327,7 @@ static inline Steinberg::int32 strnicmp16 (const Steinberg::char16* str1, const 
 
 	CFIndex str1Len = Steinberg::strlen16 (str1);
 	CFIndex str2Len = Steinberg::strlen16 (str2);
-	if (static_cast<CFIndex> (size) < str2Len) // range is not applied to second string
+	if (size < str2Len) // range is not applied to second string
 		str2Len = size;
 	CFStringRef cfStr1 = CFStringCreateWithCharactersNoCopy (Steinberg::kCFAllocator, (UniChar*)str1, str1Len, kCFAllocatorNull);
 	CFStringRef cfStr2 = CFStringCreateWithCharactersNoCopy (Steinberg::kCFAllocator, (UniChar*)str2, str2Len, kCFAllocatorNull);
@@ -420,7 +414,7 @@ static inline Steinberg::int32 sprintf16 (Steinberg::char16* str, const Steinber
 	return vsnwprintf (str, -1, format, marker);
 }
 
-#endif // SMTG_OS_LINUX
+#endif
 
 /*
 UTF-8                EF BB BF 
@@ -473,7 +467,7 @@ ConstString::ConstString (const ConstString& str, int32 offset, int32 length)
 
 //-----------------------------------------------------------------------------
 ConstString::ConstString (const FVariant& var)
-: buffer (nullptr)
+: buffer (0)
 , len (0)
 , isWide (0) 
 {
@@ -495,7 +489,7 @@ ConstString::ConstString (const FVariant& var)
 
 //-----------------------------------------------------------------------------
 ConstString::ConstString ()
-: buffer (nullptr)
+: buffer (0)
 , len (0)
 , isWide (0) 
 {
@@ -538,9 +532,6 @@ bool ConstString::testChar16 (uint32 index, char16 c) const
 //-----------------------------------------------------------------------------
 bool ConstString::extract (String& result, uint32 idx, int32 n) const
 {
-	// AddressSanitizer : when extracting part of "this" on itself, it can lead to heap-use-after-free.
-	SMTG_ASSERT (this != static_cast<ConstString*> (&result))
-	
 	if (len == 0|| idx >= len)
 		return false;
 
@@ -667,7 +658,7 @@ int32 ConstString::compare (const ConstString& str, int32 n, CompareMode mode) c
 			return 0;
 		return 1;
 	}
-	if (isEmpty ())
+	else if (isEmpty ())
 		return -1;
 
 	if (!isWide && !str.isWide)
@@ -676,23 +667,33 @@ int32 ConstString::compare (const ConstString& str, int32 n, CompareMode mode) c
 		{
 			if (isCaseSensitive (mode))
 				return strcmp (*this, str);
-			return stricmp (*this, str);
+			else
+				return stricmp (*this, str);
 		}
-		if (isCaseSensitive (mode))
-			return strncmp (*this, str, n);
-		return strnicmp (*this, str, n);
+		else
+		{
+			if (isCaseSensitive (mode))
+				return strncmp (*this, str, n);
+			else
+				return strnicmp (*this, str, n);
+		}
 	}
-	if (isWide && str.isWide)
+	else if (isWide && str.isWide)
 	{
 		if (n < 0)
 		{
 			if (isCaseSensitive (mode))
 				return strcmp16 (*this, str);
-			return stricmp16 (*this, str);
+			else
+				return stricmp16 (*this, str);
 		}
-		if (isCaseSensitive (mode))
-			return strncmp16 (*this, str, n);
-		return strnicmp16 (*this, str, n);
+		else
+		{
+			if (isCaseSensitive (mode))
+				return strncmp16 (*this, str, n);
+			else
+				return strnicmp16 (*this, str, n);
+		}
 	}
 	return compareAt (0, str, n, mode);
 }
@@ -715,7 +716,7 @@ int32 ConstString::compareAt (uint32 index, const ConstString& str, int32 n, Com
 			return 0;
 		return 1;
 	}
-	if (isEmpty ())
+	else if (isEmpty ())
 		return -1;
 
 	if (!isWide && !str.isWide)
@@ -736,13 +737,18 @@ int32 ConstString::compareAt (uint32 index, const ConstString& str, int32 n, Com
 		{
 			if (isCaseSensitive (mode))
 				return strcmp (toCompare, str);
-			return stricmp (toCompare, str);
+			else
+				return stricmp (toCompare, str);
 		}
-		if (isCaseSensitive (mode))
-			return strncmp (toCompare, str, n);
-		return strnicmp (toCompare, str, n);
+		else
+		{
+			if (isCaseSensitive (mode))
+				return strncmp (toCompare, str, n);
+			else
+				return strnicmp (toCompare, str, n);
+		}
 	}
-	if (isWide && str.isWide)
+	else if (isWide && str.isWide)
 	{
 		char16* toCompare = buffer16;
 		if (index > 0)
@@ -760,25 +766,34 @@ int32 ConstString::compareAt (uint32 index, const ConstString& str, int32 n, Com
 		{
 			if (isCaseSensitive (mode))
 				return strcmp16 (toCompare, str.text16 ());
-			return stricmp16 (toCompare, str.text16 ());
+			else
+				return stricmp16 (toCompare, str.text16 ());
 		}
-		if (isCaseSensitive (mode))
-			return strncmp16 (toCompare, str.text16 (), n);
-		return strnicmp16 (toCompare, str.text16 (), n);
+		else
+		{
+			if (isCaseSensitive (mode))
+				return strncmp16 (toCompare, str.text16 (), n);
+			else
+				return strnicmp16 (toCompare, str.text16 (), n);
+		}
 	}
-	
-	if (isWide)
+	else
 	{
-		String tmp (str.text8 ());
-		if (tmp.toWideString () == false)
-			return -1;
-		return compareAt (index, tmp, n, mode);
+		if (isWide)
+		{
+			String tmp (str.text8 ());
+			if (tmp.toWideString () == false)
+				return -1;
+			return compareAt (index, tmp, n, mode);
+		}
+		else
+		{
+			String tmp (text8 ());
+			if (tmp.toWideString () == false)
+				return 1;
+			return tmp.compareAt (index, str, n, mode);
+		}
 	}
-		
-	String tmp (text8 ());
-	if (tmp.toWideString () == false)
-		return 1;
-	return tmp.compareAt (index, str, n, mode);
 }
 
 //------------------------------------------------------------------------
@@ -790,23 +805,28 @@ Steinberg::int32 ConstString::naturalCompare (const ConstString& str, CompareMod
 			return 0;
 		return 1;
 	}
-	if (isEmpty ())
+	else if (isEmpty ())
 		return -1;
 
 	if (!isWide && !str.isWide)
 		return strnatcmp8 (buffer8, str.text8 (), isCaseSensitive (mode));
-	if (isWide && str.isWide)
+	else if (isWide && str.isWide)
 		return strnatcmp16 (buffer16, str.text16 (), isCaseSensitive (mode));
-	
-	if (isWide)
+	else
 	{
-		String tmp (str.text8 ());
-		tmp.toWideString ();
-		return strnatcmp16 (buffer16, tmp.text16 (), isCaseSensitive (mode));
+		if (isWide)
+		{
+			String tmp (str.text8 ());
+			tmp.toWideString ();
+			return strnatcmp16 (buffer16, tmp.text16 (), isCaseSensitive (mode));
+		}
+		else
+		{
+			String tmp (text8 ());
+			tmp.toWideString ();
+			return strnatcmp16 (tmp.text16 (), str.text16 (), isCaseSensitive (mode));
+		}
 	}
-	String tmp (text8 ());
-	tmp.toWideString ();
-	return strnatcmp16 (tmp.text16 (), str.text16 (), isCaseSensitive (mode));
 }
 
 //-----------------------------------------------------------------------------
@@ -816,7 +836,7 @@ bool ConstString::startsWith (const ConstString& str, CompareMode mode /*= kCase
 	{
 		return isEmpty ();
 	}
-	if (isEmpty ())
+	else if (isEmpty ())
 	{
 		return false;
 	}
@@ -830,13 +850,13 @@ bool ConstString::startsWith (const ConstString& str, CompareMode mode /*= kCase
 			return strncmp (buffer8, str.buffer8, str.length ()) == 0;
 		return strnicmp (buffer8, str.buffer8, str.length ()) == 0;
 	}
-	if (isWide && str.isWide)
+	else if (isWide && str.isWide)
 	{
 		if (isCaseSensitive (mode))
 			return strncmp16 (buffer16, str.buffer16, str.length ()) == 0;
 		return strnicmp16 (buffer16, str.buffer16, str.length ()) == 0;
 	}
-	if (isWide)
+	else if (isWide)
 	{
 		String tmp (str.text8 ());
 		tmp.toWideString ();
@@ -846,13 +866,16 @@ bool ConstString::startsWith (const ConstString& str, CompareMode mode /*= kCase
 			return strncmp16 (buffer16, tmp.buffer16, tmp.length ()) == 0;
 		return strnicmp16 (buffer16, tmp.buffer16, tmp.length ()) == 0;
 	}
-	String tmp (text8 ());
-	tmp.toWideString ();
-	if (str.length () > tmp.length ())
-		return false;
-	if (isCaseSensitive (mode))
-		return strncmp16 (tmp.buffer16, str.buffer16, str.length ()) == 0;
-	return strnicmp16 (tmp.buffer16, str.buffer16, str.length ()) == 0;
+	else
+	{
+		String tmp (text8 ());
+		tmp.toWideString ();
+		if (str.length () > tmp.length ())
+			return false;
+		if (isCaseSensitive (mode))
+			return strncmp16 (tmp.buffer16, str.buffer16, str.length ()) == 0;
+		return strnicmp16 (tmp.buffer16, str.buffer16, str.length ()) == 0;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -862,7 +885,7 @@ bool ConstString::endsWith (const ConstString& str, CompareMode mode /*= kCaseSe
 	{
 		return isEmpty ();
 	}
-	if (isEmpty ())
+	else if (isEmpty ())
 	{
 		return false;
 	}
@@ -876,13 +899,13 @@ bool ConstString::endsWith (const ConstString& str, CompareMode mode /*= kCaseSe
 			return strncmp (buffer8 + (length () - str.length ()), str.buffer8, str.length ()) == 0;
 		return strnicmp (buffer8 + (length () - str.length ()), str.buffer8, str.length ()) == 0;
 	}
-	if (isWide && str.isWide)
+	else if (isWide && str.isWide)
 	{
 		if (isCaseSensitive (mode))
 			return strncmp16 (buffer16 + (length () - str.length ()), str.buffer16, str.length ()) == 0;
 		return strnicmp16 (buffer16 + (length () - str.length ()), str.buffer16, str.length ()) == 0;
 	}
-	if (isWide)
+	else if (isWide)
 	{
 		String tmp (str.text8 ());
 		tmp.toWideString ();
@@ -892,13 +915,16 @@ bool ConstString::endsWith (const ConstString& str, CompareMode mode /*= kCaseSe
 			return strncmp16 (buffer16 + (length () - tmp.length ()), tmp.buffer16, tmp.length ()) == 0;
 		return strnicmp16 (buffer16 + (length () - tmp.length ()), tmp.buffer16, tmp.length ()) == 0;
 	}
-	String tmp (text8 ());
-	tmp.toWideString ();
-	if (str.length () > tmp.length ())
-		return false;
-	if (isCaseSensitive (mode))
-		return strncmp16 (tmp.buffer16 + (tmp.length () - str.length ()), str.buffer16, str.length ()) == 0;
-	return strnicmp16 (tmp.buffer16 + (tmp.length () - str.length ()), str.buffer16, str.length ()) == 0;
+	else
+	{
+		String tmp (text8 ());
+		tmp.toWideString ();
+		if (str.length () > tmp.length ())
+			return false;
+		if (isCaseSensitive (mode))
+			return strncmp16 (tmp.buffer16 + (tmp.length () - str.length ()), str.buffer16, str.length ()) == 0;
+		return strnicmp16 (tmp.buffer16 + (tmp.length () - str.length ()), str.buffer16, str.length ()) == 0;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -941,7 +967,7 @@ int32 ConstString::findNext (int32 startIndex, const ConstString& str, int32 n, 
 		}
 		return -1;
 	}
-	if (!isWide && !str.isWide)
+	else if (!isWide && !str.isWide)
 	{
 		uint32 stringLength = str.length ();
 		n = n < 0 ? stringLength : Min<uint32> (n, stringLength);
@@ -1172,7 +1198,7 @@ int32 ConstString::findPrev (int32 startIndex, const ConstString& str, int32 n, 
 		}
 		return -1;
 	}
-	if (!isWide && !str.isWide)
+	else if (!isWide && !str.isWide)
 	{
 		uint32 stringLength = str.length ();
 		n = n < 0 ? stringLength : Min<uint32> (n, stringLength);
@@ -1278,11 +1304,13 @@ int32 ConstString::getFirstDifferent (const ConstString& str, CompareMode mode) 
 				return -1;
 			return getFirstDifferent (tmp, mode);
 		}
-		
-		String tmp (text8 ());
-		if (tmp.toWideString () == false)
-			return -1;
-		return tmp.getFirstDifferent (str, mode);
+		else
+		{
+			String tmp (text8 ());
+			if (tmp.toWideString () == false)
+				return -1;
+			return tmp.getFirstDifferent (str, mode);
+		}
 	}
 
 	uint32 len1 = len;
@@ -1338,7 +1366,8 @@ bool ConstString::scanInt64 (int64& value, uint32 offset, bool scanToEnd) const
 
 	if (isWide)
 		return scanInt64_16 (buffer16 + offset, value, scanToEnd);
-	return scanInt64_8 (buffer8 + offset, value, scanToEnd);
+	else
+		return scanInt64_8 (buffer8 + offset, value, scanToEnd);
 }
 
 //-----------------------------------------------------------------------------
@@ -1349,7 +1378,8 @@ bool ConstString::scanUInt64 (uint64& value, uint32 offset, bool scanToEnd) cons
 
 	if (isWide)
 		return scanUInt64_16 (buffer16 + offset, value, scanToEnd);
-	return scanUInt64_8 (buffer8 + offset, value, scanToEnd);
+	else
+		return scanUInt64_8 (buffer8 + offset, value, scanToEnd);
 }
 
 //-----------------------------------------------------------------------------
@@ -1360,7 +1390,8 @@ bool ConstString::scanHex (uint8& value, uint32 offset, bool scanToEnd) const
 
 	if (isWide)
 		return scanHex_16 (buffer16 + offset, value, scanToEnd);
-	return scanHex_8 (buffer8 + offset, value, scanToEnd);
+	else
+		return scanHex_8 (buffer8 + offset, value, scanToEnd);
 }
 
 //-----------------------------------------------------------------------------
@@ -1371,7 +1402,8 @@ bool ConstString::scanInt32 (int32& value, uint32 offset, bool scanToEnd) const
 
 	if (isWide)
 		return scanInt32_16 (buffer16 + offset, value, scanToEnd);
-	return scanInt32_8 (buffer8 + offset, value, scanToEnd);
+	else
+		return scanInt32_8 (buffer8 + offset, value, scanToEnd);
 }
 
 //-----------------------------------------------------------------------------
@@ -1382,7 +1414,8 @@ bool ConstString::scanUInt32 (uint32& value, uint32 offset, bool scanToEnd) cons
 
 	if (isWide)
 		return scanUInt32_16 (buffer16 + offset, value, scanToEnd);
-	return scanUInt32_8 (buffer8 + offset, value, scanToEnd);
+	else
+		return scanUInt32_8 (buffer8 + offset, value, scanToEnd);
 }
 
 //-----------------------------------------------------------------------------
@@ -1392,7 +1425,7 @@ bool ConstString::scanInt64_8 (const char8* text, int64& value, bool scanToEnd)
 	{
 		if (sscanf (text, "%" FORMAT_INT64A, &value) == 1)
 			return true;
-		if (scanToEnd == false)
+		else if (scanToEnd == false)
 			return false;
 		text++;
 	}
@@ -1418,7 +1451,7 @@ bool ConstString::scanUInt64_8 (const char8* text, uint64& value, bool scanToEnd
 	{
 		if (sscanf (text, "%" FORMAT_UINT64A, &value) == 1)
 			return true;
-		if (scanToEnd == false)
+		else if (scanToEnd == false)
 			return false;
 		text++;
 	}
@@ -1468,7 +1501,7 @@ bool ConstString::scanHex_8 (const char8* text, uint8& value, bool scanToEnd)
 			value = (uint8)v;
 			return true;
 		}
-		if (scanToEnd == false)
+		else if (scanToEnd == false)
 			return false;
 		text++;
 	}
@@ -1523,7 +1556,7 @@ bool ConstString::scanFloat (double& value, uint32 offset, bool scanToEnd) const
 	{
 		if (sscanf (txt, "%lf", &value) == 1)
 			return true;
-		if (scanToEnd == false)
+		else if (scanToEnd == false)
 			return false;
 		txt++;
 	}
@@ -1551,7 +1584,7 @@ char16 ConstString::toLower (char16 c)
 		}
 		return c;
 	#elif SMTG_OS_LINUX
-	assert (false && "DEPRECATED No Linux implementation");
+	assert(false && "DEPRECATED No Linux implementation");
 		return c;
 	#else
 		return towlower (c);
@@ -1579,7 +1612,7 @@ char16 ConstString::toUpper (char16 c)
 		}
 		return c;
     #elif SMTG_OS_LINUX
-	assert (false && "DEPRECATED No Linux implementation");
+	assert(false && "DEPRECATED No Linux implementation");
 		return c;
 	#else
 		return towupper (c);
@@ -1596,7 +1629,7 @@ char8 ConstString::toLower (char8 c)
         ::CharLowerA (temp);
         return temp[0];
 	#else
-		return static_cast<char8> (tolower (c));
+		return tolower (c);
 	#endif
 }
 
@@ -1610,7 +1643,7 @@ char8 ConstString::toUpper (char8 c)
         ::CharUpperA (temp);
         return temp[0];
 	#else
-		return static_cast<char8> (toupper (c));
+		return toupper (c);
 	#endif
 }
 
@@ -1725,7 +1758,8 @@ bool ConstString::isDigit (uint32 index) const
 
 	if (isWide)
 		return ConstString::isCharDigit (buffer16[index]);
-	return ConstString::isCharDigit (buffer8[index]);
+	else
+		return ConstString::isCharDigit (buffer8[index]);
 }
 
 //-----------------------------------------------------------------------------
@@ -1822,7 +1856,7 @@ static CFStringEncoding MBCodePageToCFStringEncoding (uint32 codePage)
 //-----------------------------------------------------------------------------
 int32 ConstString::multiByteToWideString (char16* dest, const char8* source, int32 charCount, uint32 sourceCodePage)
 {
-	if (source == nullptr || source[0] == 0)
+	if (source == 0 || source[0] == 0)
 	{
 		if (dest && charCount > 0)
 		{
@@ -1832,7 +1866,7 @@ int32 ConstString::multiByteToWideString (char16* dest, const char8* source, int
 	}
 	int32 result = 0;
 #if SMTG_OS_WINDOWS
-	result = MultiByteToWideChar (sourceCodePage, MB_ERR_INVALID_CHARS, source, -1, wscast (dest), charCount);
+	result = MultiByteToWideChar (sourceCodePage, MB_ERR_INVALID_CHARS, source, -1, dest, charCount);
 #endif
 
 #if SMTG_OS_MACOS
@@ -1855,7 +1889,7 @@ int32 ConstString::multiByteToWideString (char16* dest, const char8* source, int
 #endif
 
 #if SMTG_OS_LINUX
-	if (sourceCodePage == kCP_ANSI || sourceCodePage == kCP_US_ASCII || sourceCodePage == kCP_Utf8)
+	if (sourceCodePage == kCP_ANSI || sourceCodePage == kCP_Utf8)
 	{
 		if (dest == nullptr)
 		{
@@ -1875,8 +1909,8 @@ int32 ConstString::multiByteToWideString (char16* dest, const char8* source, int
 		}
 	}
 	else
-	{
-		assert (false && "DEPRECATED No Linux implementation");
+    {
+		assert(false && "DEPRECATED No Linux implementation");
 	}
 
 #endif
@@ -1889,7 +1923,7 @@ int32 ConstString::multiByteToWideString (char16* dest, const char8* source, int
 int32 ConstString::wideStringToMultiByte (char8* dest, const char16* wideString, int32 charCount, uint32 destCodePage)
 {
 #if SMTG_OS_WINDOWS
-	return WideCharToMultiByte (destCodePage, 0, wscast (wideString), -1, dest, charCount, nullptr, nullptr);
+	return WideCharToMultiByte (destCodePage, 0, wideString, -1, dest, charCount, 0, 0);
 
 #elif SMTG_OS_MACOS
 	int32 result = 0;
@@ -1932,7 +1966,7 @@ int32 ConstString::wideStringToMultiByte (char8* dest, const char16* wideString,
 			}
 		}
 	}
-	else if (destCodePage == kCP_ANSI || destCodePage == kCP_US_ASCII)
+	else if (destCodePage == kCP_ANSI)
 	{
 		if (dest == nullptr)
 		{
@@ -1955,13 +1989,14 @@ int32 ConstString::wideStringToMultiByte (char8* dest, const char16* wideString,
 		}
 	}
 	else
-	{
-		assert (false && "DEPRECATED No Linux implementation");
+    {
+		assert(false && "DEPRECATED No Linux implementation");
 	}
 	return result;
 
 #else
-	assert (false && "DEPRECATED No Linux implementation");
+#warning DEPRECATED No Linux implementation
+	assert(false && "DEPRECATED No Linux implementation");
 	return 0;
 #endif
 
@@ -1977,7 +2012,7 @@ bool ConstString::isNormalized (UnicodeNormalization n)
 #ifdef UNICODE
 	if (n != kUnicodeNormC)
 		return false;
-	uint32 normCharCount = static_cast<uint32> (FoldString (MAP_PRECOMPOSED, wscast (buffer16), len, nullptr, 0));
+	uint32 normCharCount = static_cast<uint32> (FoldString (MAP_PRECOMPOSED, buffer16, len, 0, 0));
 	return (normCharCount == len);
 #else
 	return false; 
@@ -2007,27 +2042,11 @@ String::String ()
 //-----------------------------------------------------------------------------
 String::String (const char8* str, MBCodePage codePage, int32 n, bool isTerminated)
 {
-	isWide = false;
+	isWide = 0;
 	if (str)
 	{
-		if (isTerminated && n >= 0 && str[n] != 0)
-		{
-			// isTerminated is not always set correctly
-			isTerminated = false;
-		}
-
-		if (!isTerminated)
-		{
-			assign (str, n, isTerminated);
-			toWideString (codePage);
-		}
-		else
-		{
-			if (n < 0)
-				n = static_cast<int32> (strlen (str));
-			if (n > 0)
-				_toWideString (str, n, codePage);
-		}
+		assign (str, n, isTerminated);
+		toWideString (codePage);
 	}
 }
 
@@ -2096,7 +2115,7 @@ String::String (String&& str)
 //-----------------------------------------------------------------------------
 String& String::operator= (String&& str)
 {
-	SMTG_ASSERT (buffer == nullptr || buffer != str.buffer);
+	SMTG_ASSERT (buffer == 0 || buffer != str.buffer);
 	tryFreeBuffer ();
 	
 	isWide = str.isWide;
@@ -2120,32 +2139,21 @@ void String::updateLength ()
 //-----------------------------------------------------------------------------
 bool String::toWideString (uint32 sourceCodePage)
 {
-	if (!isWide && buffer8 && len > 0)
-		return _toWideString (buffer8, len, sourceCodePage);
-	isWide = true;
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-bool String::_toWideString (const char8* src, int32 length, uint32 sourceCodePage)
-{
 	if (!isWide)
 	{
-		if (src && length > 0)
+		if (buffer8 && len > 0)
 		{
-			int32 bytesNeeded = multiByteToWideString (nullptr, src, 0, sourceCodePage) * sizeof (char16);
+			int32 bytesNeeded = multiByteToWideString (0, buffer8, 0, sourceCodePage) * sizeof (char16);
 			if (bytesNeeded)
 			{
 				bytesNeeded += sizeof (char16);
-				char16* newStr = (char16*)malloc (bytesNeeded);
-				if (multiByteToWideString (newStr, src, length + 1, sourceCodePage) < 0)
+				char16* newStr = (char16*) malloc (bytesNeeded);
+				if (multiByteToWideString (newStr, buffer8, len + 1, sourceCodePage) <= 0)
 				{
 					free (newStr);
 					return false;
 				}
-				if (buffer8)
-					free (buffer8);
-
+				free (buffer8);
 				buffer16 = newStr;
 				isWide = true;
 				updateLength ();
@@ -2219,7 +2227,7 @@ bool String::toMultiByte (uint32 destCodePage)
 	{
 		if (buffer16 && len > 0)
 		{
-			int32 numChars = wideStringToMultiByte (nullptr, buffer16, 0, destCodePage) + sizeof (char8);
+			int32 numChars = wideStringToMultiByte (0, buffer16, 0, destCodePage) + sizeof (char8);
 			char8* newStr = (char8*) malloc (numChars * sizeof (char8));
 			if (wideStringToMultiByte (newStr, buffer16, numChars, destCodePage) <= 0)
 			{
@@ -2245,9 +2253,8 @@ bool String::toMultiByte (uint32 destCodePage)
 //-----------------------------------------------------------------------------
 void String::fromUTF8 (const char8* utf8String)
 {
-	if (buffer8 != utf8String)
-		resize (0, false);
-	_toWideString (utf8String, static_cast<int32> (strlen (utf8String)), kCP_Utf8);
+	assign (utf8String);
+	toWideString (kCP_Utf8);
 }
 
 //-----------------------------------------------------------------------------
@@ -2256,7 +2263,7 @@ bool String::normalize (UnicodeNormalization n)
 	if (isWide == false)
 		return false;
 
-	if (buffer16 == nullptr)
+	if (buffer16 == 0)
 		return true;
 
 #if SMTG_OS_WINDOWS
@@ -2264,12 +2271,12 @@ bool String::normalize (UnicodeNormalization n)
 	if (n != kUnicodeNormC)
 		return false;
 
-	uint32 normCharCount = static_cast<uint32> (FoldString (MAP_PRECOMPOSED, wscast (buffer16), len, nullptr, 0));
+	uint32 normCharCount = static_cast<uint32> (FoldString (MAP_PRECOMPOSED, buffer16, len, 0, 0));
 	if (normCharCount == len)
 		return true;
 
 	char16* newString = (char16*)malloc ((normCharCount + 1) * sizeof (char16));
-	uint32 converterCount = static_cast<uint32> (FoldString (MAP_PRECOMPOSED, wscast (buffer16), len, wscast (newString), normCharCount + 1));
+	uint32 converterCount = static_cast<uint32> (FoldString (MAP_PRECOMPOSED, buffer16, len, newString, normCharCount + 1));
 	if (converterCount != normCharCount)
 	{
 		free (newString);
@@ -2313,7 +2320,7 @@ void String::tryFreeBuffer ()
 	if (buffer)
 	{
 		free (buffer);
-		buffer = nullptr;
+		buffer = 0;
 	}
 }
 
@@ -2341,7 +2348,7 @@ bool String::resize (uint32 newLength, bool wide, bool fill)
 			if (newBufferSize != oldBufferSize)
 			{
 				void* newstr = realloc (buffer, newBufferSize);
-				if (newstr == nullptr)
+				if (newstr == 0)
 					return false;
 				buffer = newstr;
 				if (isWide)
@@ -2355,7 +2362,7 @@ bool String::resize (uint32 newLength, bool wide, bool fill)
 		else
 		{
 			void* newstr = malloc (newBufferSize);
-			if (newstr == nullptr)
+			if (newstr == 0)
 				return false;
 			buffer = newstr;
 			if (isWide)
@@ -2402,10 +2409,12 @@ bool String::setChar8 (uint32 index, char8 c)
 			len = index;
 			return true;
 		}
-		
-		if (resize (index + 1, isWide, true) == false)
-			return false;
-		len = index + 1;
+		else
+		{
+			if (resize (index + 1, isWide, true) == false)
+				return false;
+			len = index + 1;
+		}
 	}
 	
 	if (index < len && buffer)
@@ -2452,9 +2461,12 @@ bool String::setChar16 (uint32 index, char16 c)
 			len = index;
 			return true;
 		}
-		if (resize (index + 1, isWide, true) == false)
-			return false;
-		len = index + 1;
+		else
+		{
+			if (resize (index + 1, isWide, true) == false)
+				return false;
+			len = index + 1;
+		}
 	}
 
 	if (index < len && buffer)
@@ -2488,7 +2500,8 @@ String& String::assign (const ConstString& str, int32 n)
 {
 	if (str.isWideString ())
 		return assign (str.text16 (), n < 0 ? str.length () : n);
-	return assign (str.text8 (), n < 0 ? str.length () : n);
+	else
+		return assign (str.text8 (), n < 0 ? str.length () : n);
 }
 
 //-----------------------------------------------------------------------------
@@ -2507,7 +2520,7 @@ String& String::assign (const char8* str, int32 n, bool isTerminated)
 
 	if (resize (n, false))
 	{
-		if (buffer8 && n > 0 && str)
+		if (buffer8 && n > 0)
 		{
 			memcpy (buffer8, str, n * sizeof (char8));
 			SMTG_ASSERT (buffer8[n] == 0)
@@ -2534,7 +2547,7 @@ String& String::assign (const char16* str, int32 n, bool isTerminated)
 
 	if (resize (n, true))
 	{
-		if (buffer16 && n > 0 && str)
+		if (buffer16 && n > 0)
 		{
 			memcpy (buffer16, str, n * sizeof (char16));
 			SMTG_ASSERT (buffer16[n] == 0)
@@ -2584,7 +2597,8 @@ String& String::append (const ConstString& str, int32 n)
 {
 	if (str.isWideString ())
 		return append (str.text16 (), n);
-	return append (str.text8 (), n);
+	else
+		return append (str.text8 (), n);
 }
 
 //-----------------------------------------------------------------------------
@@ -2614,7 +2628,7 @@ String& String::append (const char8* str, int32 n)
 		if (!resize (newlen, false))
 			return *this;
 
-		if (buffer && str)
+		if (buffer)
 		{
 			memcpy (buffer8 + len, str, n * sizeof (char8));
 			SMTG_ASSERT (buffer8[newlen] == 0)
@@ -2649,7 +2663,7 @@ String& String::append (const char16* str, int32 n)
 		if (!resize (newlen, true))
 			return *this;
 
-		if (buffer16 && str)
+		if (buffer16)
 		{
 			memcpy (buffer16 + len, str, n * sizeof (char16));
 			SMTG_ASSERT (buffer16[newlen] == 0)
@@ -2668,7 +2682,7 @@ String& String::append (const char8 c, int32 n)
 	{
 		return append (str, 1);
 	}
-	if (n > 1)
+	else if (n > 1)
 	{
 		if (isWide)
 		{
@@ -2702,7 +2716,7 @@ String& String::append (const char16 c, int32 n)
 		char16 str[] = {c, 0};
 		return append (str, 1);
 	}
-	if (n > 1)
+	else if (n > 1)
 	{
 		if (!isWide)
 		{
@@ -2731,7 +2745,8 @@ String& String::insertAt (uint32 idx, const ConstString& str, int32 n)
 {
 	if (str.isWideString ())
 		return insertAt (idx, str.text16 (), n);
-	return insertAt (idx, str.text8 (), n);
+	else
+		return insertAt (idx, str.text8 (), n);
 }
 
 //-----------------------------------------------------------------------------
@@ -2757,7 +2772,7 @@ String& String::insertAt (uint32 idx, const char8* str, int32 n)
 		if (!resize (newlen, false))
 			return *this;
 
-		if (buffer && str)
+		if (buffer)
 		{
 			if (idx < len)
 				memmove (buffer8 + idx + n, buffer8 + idx, (len - idx) * sizeof (char8));
@@ -2791,7 +2806,7 @@ String& String::insertAt (uint32 idx, const char16* str, int32 n)
 		if (!resize (newlen, true))
 			return *this;
 
-		if (buffer && str)
+		if (buffer)
 		{
 			if (idx < len)
 				memmove (buffer16 + idx + n, buffer16 + idx, (len - idx) * sizeof (char16));
@@ -2809,7 +2824,8 @@ String& String::replace (uint32 idx, int32 n1, const ConstString& str, int32 n2)
 {
 	if (str.isWideString ())
 		return replace (idx, n1, str.text16 (), n2);
-	return replace (idx, n1, str.text8 (), n2);
+	else
+		return replace (idx, n1, str.text8 (), n2);
 }
 
 // "replace" replaces n1 number of characters at the specified index with
@@ -2817,7 +2833,7 @@ String& String::replace (uint32 idx, int32 n1, const ConstString& str, int32 n2)
 //-----------------------------------------------------------------------------
 String& String::replace (uint32 idx, int32 n1, const char8* str, int32 n2)
 {
-	if (idx > len || str == nullptr)
+	if (idx > len || str == 0)
 		return *this;
 
 	if (isWide)
@@ -2858,7 +2874,7 @@ String& String::replace (uint32 idx, int32 n1, const char8* str, int32 n2)
 //-----------------------------------------------------------------------------
 String& String::replace (uint32 idx, int32 n1, const char16* str, int32 n2)
 {
-	if (idx > len || str == nullptr)
+	if (idx > len || str == 0)
 		return *this;
 
 	if (!isWide)
@@ -2895,7 +2911,7 @@ String& String::replace (uint32 idx, int32 n1, const char16* str, int32 n2)
 //-----------------------------------------------------------------------------
 int32 String::replace (const char8* toReplace, const char8* toReplaceWith, bool all, CompareMode m)
 {
-	if (toReplace == nullptr || toReplaceWith == nullptr)
+	if (toReplace == 0 || toReplaceWith == 0)
 		return 0;
 
 	int32 result = 0;
@@ -2923,7 +2939,7 @@ int32 String::replace (const char8* toReplace, const char8* toReplaceWith, bool 
 //-----------------------------------------------------------------------------
 int32 String::replace (const char16* toReplace, const char16* toReplaceWith, bool all, CompareMode m)
 {
-	if (toReplace == nullptr || toReplaceWith == nullptr)
+	if (toReplace == 0 || toReplaceWith == 0)
 		return 0;
 
 	int32 result = 0;
@@ -3248,7 +3264,7 @@ static uint32 performRemoveChars (T* str, uint32 length, const T* toRemove)
 //-----------------------------------------------------------------------------
 bool String::removeChars8 (const char8* toRemove)
 {
-	if (isEmpty () || toRemove == nullptr)
+	if (isEmpty () || toRemove == 0)
 		return true;
 
 	if (isWide)
@@ -3272,7 +3288,7 @@ bool String::removeChars8 (const char8* toRemove)
 //-----------------------------------------------------------------------------
 bool String::removeChars16 (const char16* toRemove)
 {
-	if (isEmpty () || toRemove == nullptr)
+	if (isEmpty () || toRemove == 0)
 		return true;
 
 	if (!isWide)
@@ -3352,44 +3368,55 @@ String& String::printInt64 (int64 value)
 }
 
 //-----------------------------------------------------------------------------
-String& String::printFloat (double value, uint32 maxPrecision)
+String& String::printFloat (double value)
 {
-	static constexpr auto kMaxAfterCommaResolution = 16;
-	// escape point for integer values, avoid unnecessary complexity later on
-	const bool withinInt64Boundaries = value <= std::numeric_limits<int64>::max () && value >= std::numeric_limits<int64>::lowest ();
-	if (withinInt64Boundaries && (maxPrecision == 0 || std::round (value) == value))
-		return printInt64 (value);
-
-	const auto absValue = std::abs (value);
-	const uint32 valueExponent = absValue >= 1 ? std::log10 (absValue) : -std::log10 (absValue) + 1;
-
-	maxPrecision = std::min<uint32> (kMaxAfterCommaResolution - valueExponent, maxPrecision);
-
 	if (isWide)
-		printf (STR ("%s%dlf"), STR ("%."), maxPrecision);
-	else
-		printf ("%s%dlf", "%.", maxPrecision);
-
-	if (isWide)
-		printf (text16 (), value);
-	else
-		printf (text8 (), value);
-
-	// trim trail zeros
-	for (int32 i = length () - 1; i >= 0; i--)
 	{
-		if (isWide && testChar16 (i, '0') || testChar8 (i, '0'))
-			remove (i);
-		else if (isWide && testChar16(i,'.') || testChar8(i, '.'))
-		{
-			remove(i);
-			break;
-		}
-		else
-			break;
-	}
+		char16 string[kPrintfBufferSize];
+		sprintf16 (string, STR16 ("%lf"), value);
 
-	return *this;
+		char16* pointPtr = strrchr16 (string, STR ('.'));
+		if (pointPtr)
+		{
+			pointPtr++; // keep 1st digit after point
+			int32 index = strlen16 (string) - 1;
+			char16 zero = STR16 ('0');
+			while (pointPtr < (string + index))
+			{
+				if (string[index] == zero)
+				{
+					string[index] = 0;
+					index--;
+				}
+				else
+					break;
+			}
+		}
+		return assign (string);
+	}
+	else
+	{
+		char8 string[kPrintfBufferSize];
+		sprintf (string, "%lf", value);
+
+		char8* pointPtr = strrchr (string, '.');
+		if (pointPtr)
+		{
+			pointPtr++; // keep 1st digit after point
+			int32 index = (int32) (strlen (string) - 1);
+			while (pointPtr < (string + index))
+			{
+				if (string[index] == '0')
+				{
+					string[index] = 0;
+					index--;
+				}
+				else
+					break;
+			}
+		}
+		return assign (string);
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -3433,19 +3460,17 @@ bool String::incrementTrailingNumber (uint32 width, tchar separator, uint32 minN
 	}
 	else
 	{
-		static constexpr auto kFormatSize = 64u;
-		static constexpr auto kTrailSize = 64u;
-		char format[kFormatSize];
-		char trail[kTrailSize];
+		char format[64];
+		char trail[128];
 		if (separator && isEmpty () == false)
 		{
-			snprintf (format, kFormatSize, "%%c%%0%uu", width);
-			snprintf (trail, kTrailSize, format, separator, (uint32) number);
+			sprintf (format, "%%c%%0%uu", width);
+			sprintf (trail, format, separator, (uint32) number);
 		}
 		else
 		{
-			snprintf (format, kFormatSize, "%%0%uu", width);
-			snprintf (trail, kTrailSize, format, (uint32) number);
+			sprintf (format, "%%0%uu", width);
+			sprintf (trail, format, (uint32) number);
 		}
 		append (trail);
 	}
@@ -3564,14 +3589,6 @@ bool String::fromVariant (const FVariant& var)
 			printInt64 (var.getInt ());
 			return true;
 
-		case FVariant::kObject:
-			if (auto string = ICast<Steinberg::IString> (var.getObject ()))
-				if (string->isWideString ())
-					assign (string->getText16 ());
-				else
-					assign (string->getText8 ());
-			return true;
-
 		default:
 			remove ();
 	}
@@ -3632,7 +3649,7 @@ void String::take (String& other)
 	buffer = other.buffer;
 	len = other.len;
 
-	other.buffer = nullptr;
+	other.buffer = 0;
 	other.len = 0;
 }
 
@@ -3650,7 +3667,7 @@ void* String::pass ()
 {
 	void* res = buffer;
 	len = 0;
-	buffer = nullptr;
+	buffer = 0;
 	return res;
 }
 
@@ -3705,9 +3722,11 @@ unsigned char* String::toPascalString (unsigned char* buf)
 		}
 		return buf;
 	}
-	
-	*buf = 0;
-	return buf;
+	else
+	{
+		*buf = 0;
+		return buf;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -3806,7 +3825,7 @@ void* ConstString::toCFStringRef (uint32 encoding, bool mutableCFString) const
 				return (void*)CFStringCreateWithCString (kCFAllocator, "", encoding);
 		}
 	}
-	return nullptr;
+	return 0;
 }
 
 #endif
@@ -3838,11 +3857,11 @@ uint32 hashString16 (const char16* s, uint32 m)
 //------------------------------------------------------------------------
 template <class T> int32 tstrnatcmp (const T* s1, const T* s2, bool caseSensitive = true)
 {
-	if (s1 == nullptr && s2 == nullptr)
+	if (s1 == 0 && s2 == 0)
 		return 0;
-	if (s1 == nullptr)
+	else if (s1 == 0)
 		return -1;
-	if (s2 == nullptr)
+	else if (s2 == 0)
 		return 1;
 
 	while (*s1 && *s2)
@@ -3888,8 +3907,8 @@ template <class T> int32 tstrnatcmp (const T* s1, const T* s2, bool caseSensitiv
 		{
 			if (caseSensitive == false)
 			{
-				T srcToUpper = static_cast<T> (toupper (*s1));
-				T dstToUpper = static_cast<T> (toupper (*s2));
+				T srcToUpper = toupper (*s1);
+				T dstToUpper = toupper (*s2);
 				if (srcToUpper != dstToUpper)
 					return (int32)(srcToUpper - dstToUpper);
 			}
@@ -3903,11 +3922,12 @@ template <class T> int32 tstrnatcmp (const T* s1, const T* s2, bool caseSensitiv
 
 	if (*s1 == 0 && *s2 == 0)
 		return 0;
-	if (*s1 == 0)
+	else if (*s1 == 0)
 		return -1;
-	if (*s2 == 0)
+	else if (*s2 == 0)
 		return 1;
-	return (int32)(*s1 - *s2);
+	else
+		return (int32)(*s1 - *s2);
 }
 
 //------------------------------------------------------------------------

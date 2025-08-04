@@ -8,7 +8,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2024, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2019, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -39,13 +39,13 @@
 #include "public.sdk/source/vst/vstcomponentbase.h"
 #include "public.sdk/source/vst/vstparameters.h"
 #include "public.sdk/source/common/pluginview.h"
+#include "base/source/fstring.h"
 
 #include "pluginterfaces/vst/ivsteditcontroller.h"
 #include "pluginterfaces/vst/ivstunits.h"
 
-#include <map>
-#include <string>
 #include <vector>
+#include <map>
 
 //------------------------------------------------------------------------
 namespace Steinberg {
@@ -56,9 +56,11 @@ class EditorView;
 //------------------------------------------------------------------------
 /** Default implementation for a VST 3 edit controller.
 \ingroup vstClasses
-Can be used as base class for a specific controller implementation
-*/
-class EditController : public ComponentBase, public IEditController, public IEditController2
+Can be used as base class for a specific controller implementation */
+//------------------------------------------------------------------------
+class EditController: public ComponentBase,
+					  public IEditController,
+					  public IEditController2
 {
 public:
 //------------------------------------------------------------------------
@@ -86,7 +88,7 @@ public:
 
 	//---from ComponentBase---------
 	tresult PLUGIN_API initialize (FUnknown* context) SMTG_OVERRIDE;
-	tresult PLUGIN_API terminate () SMTG_OVERRIDE;
+	tresult PLUGIN_API terminate  () SMTG_OVERRIDE;
 
 	//---Internal Methods-------
 	virtual tresult beginEdit (ParamID tag);	///< to be called before a serie of performEdit
@@ -125,8 +127,8 @@ public:
 	REFCOUNT_METHODS (ComponentBase)
 //------------------------------------------------------------------------
 protected:
-	IPtr<IComponentHandler> componentHandler;
-    IPtr<IComponentHandler2> componentHandler2;
+	IComponentHandler* componentHandler;
+	IComponentHandler2* componentHandler2;
 
 	ParameterContainer parameters;
 
@@ -135,17 +137,17 @@ protected:
 
 //------------------------------------------------------------------------
 /** View related to an edit controller.
-\ingroup vstClasses
-*/
+\ingroup vstClasses  */
+//------------------------------------------------------------------------
 class EditorView : public CPluginView
 {
 public:
 //------------------------------------------------------------------------
 	EditorView (EditController* controller, ViewRect* size = nullptr);
-	~EditorView () override;
+	virtual ~EditorView ();
 
 	/** Gets its controller part. */
-	EditController* getController () const { return controller; }
+	EditController* getController () { return controller; }
 
 	//---from CPluginView-------------
 	void attachedToParent () SMTG_OVERRIDE;
@@ -153,13 +155,13 @@ public:
 
 //------------------------------------------------------------------------
 protected:
-	IPtr<EditController> controller;
+	EditController* controller;
 };
 
 //------------------------------------------------------------------------
 /** Unit element.
-\ingroup vstClasses 
-*/
+\ingroup vstClasses  */
+//------------------------------------------------------------------------
 class Unit : public FObject
 {
 public:
@@ -198,8 +200,8 @@ protected:
 
 //------------------------------------------------------------------------
 /** ProgramList element.
-\ingroup vstClasses 
-*/
+\ingroup vstClasses  */
+//------------------------------------------------------------------------
 class ProgramList : public FObject
 {
 public:
@@ -241,8 +243,8 @@ public:
 	OBJ_METHODS (ProgramList, FObject)
 //------------------------------------------------------------------------
 protected:
-	using StringMap = std::map<std::string, std::u16string>;
-	using StringVector = std::vector<std::u16string>;
+	using StringMap = std::map<String, String>;
+	using StringVector = std::vector<String>;
 	using ProgramInfoVector = std::vector<StringMap>;
 	ProgramListInfo info;
 	UnitID unitId;
@@ -253,8 +255,8 @@ protected:
 
 //------------------------------------------------------------------------
 /** ProgramListWithPitchNames element.
-\ingroup vstClasses
-*/
+\ingroup vstClasses  */
+//-----------------------------------------------------------------------------
 class ProgramListWithPitchNames : public ProgramList
 {
 public:
@@ -275,7 +277,7 @@ public:
 
 	OBJ_METHODS (ProgramListWithPitchNames, ProgramList)
 protected:
-	using PitchNameMap = std::map<int16, std::u16string>;
+	using PitchNameMap = std::map<int16, String>;
 	using PitchNamesVector = std::vector<PitchNameMap>;
 	PitchNamesVector pitchNames;
 };
@@ -285,14 +287,12 @@ protected:
 \ingroup vstClasses
 - [extends EditController]
 */
+//------------------------------------------------------------------------
 class EditControllerEx1 : public EditController, public IUnitInfo
 {
 public:
 	EditControllerEx1 ();
-	~EditControllerEx1 () override;
-
-	//---from ComponentBase---------
-	tresult PLUGIN_API terminate () SMTG_OVERRIDE;
+	virtual ~EditControllerEx1 ();
 
 	/** Adds a given unit. */
 	bool addUnit (Unit* unit);
@@ -366,7 +366,7 @@ protected:
 	UnitVector units;
 	ProgramListVector programLists;
 	ProgramIndexMap programIndexMap;
-	UnitID selectedUnit {kRootUnitId};
+	UnitID selectedUnit;
 };
 
 //------------------------------------------------------------------------

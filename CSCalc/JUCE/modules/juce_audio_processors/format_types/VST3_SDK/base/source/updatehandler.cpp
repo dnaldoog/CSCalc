@@ -9,7 +9,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2024, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2019, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -56,6 +56,7 @@ using Steinberg::Base::Thread::FGuard;
 namespace Steinberg {
 
 DEF_CLASS_IID (IUpdateManager)
+bool UpdateHandler::lockUpdates = false;
 
 namespace Update {
 const uint32 kHashSize = (1 << 8); // must be power of 2 (16 bytes * 256 == 4096)
@@ -72,10 +73,7 @@ inline IPtr<FUnknown> getUnknownBase (FUnknown* unknown)
 {
 	FUnknown* result = nullptr;
 	if (unknown)
-	{
-		if (unknown->queryInterface (FObject::iid, (void**)&result) != kResultTrue)
-			unknown->queryInterface (FUnknown::iid, (void**)&result);
-	}
+		unknown->queryInterface (FUnknown::iid, (void**)&result);
 
 	return owned (result);
 }
@@ -130,28 +128,28 @@ struct UpdateData
 };
 
 //------------------------------------------------------------------------
-using DeferedChangeList = std::deque<DeferedChange>;
-using DeferedChangeListIterConst = DeferedChangeList::const_iterator;
-using DeferedChangeListIter = DeferedChangeList::iterator;
+typedef std::deque<DeferedChange> DeferedChangeList;
+typedef DeferedChangeList::const_iterator DeferedChangeListIterConst;
+typedef DeferedChangeList::iterator DeferedChangeListIter;
 
-using UpdateDataList = std::deque<UpdateData>;
-using UpdateDataListIterConst = UpdateDataList::const_iterator;
+typedef std::deque<UpdateData> UpdateDataList;
+typedef UpdateDataList::const_iterator UpdateDataListIterConst;
 
 #if CLASS_NAME_TRACKED
-using DependentList = std::vector<Dependency>;
+typedef std::vector<Dependency> DependentList;
 #else
 typedef std::vector<IDependent*> DependentList;
 #endif
-using DependentListIter = DependentList::iterator;
-using DependentListIterConst = DependentList::const_iterator;
+typedef DependentList::iterator DependentListIter;
+typedef DependentList::const_iterator DependentListIterConst;
 
 #if SMTG_CPP11_STDLIBSUPPORT
-using DependentMap = std::unordered_map<const FUnknown*, DependentList>;
+typedef std::unordered_map<const FUnknown*, DependentList> DependentMap;
 #else
 typedef std::map<const FUnknown*, DependentList> DependentMap;
 #endif
-using DependentMapIter = DependentMap::iterator;
-using DependentMapIterConst = DependentMap::const_iterator;
+typedef DependentMap::iterator DependentMapIter;
+typedef DependentMap::const_iterator DependentMapIterConst;
 
 struct Table
 {
@@ -245,17 +243,10 @@ tresult PLUGIN_API UpdateHandler::addDependent (FUnknown* u, IDependent* _depend
 
 	return kResultTrue;
 }
+
 //------------------------------------------------------------------------
 tresult PLUGIN_API UpdateHandler::removeDependent (FUnknown* u, IDependent* dependent)
 {
-	size_t eraseCount;
-	return removeDependent (u, dependent, eraseCount);
-}
-
-//------------------------------------------------------------------------
-tresult PLUGIN_API UpdateHandler::removeDependent (FUnknown* u, IDependent* dependent, size_t& eraseCount)
-{
-	eraseCount = 0;
 	IPtr<FUnknown> unknown = Update::getUnknownBase (u);
 	if (unknown == nullptr && dependent == nullptr)
 		return kResultFalse;
@@ -270,7 +261,7 @@ tresult PLUGIN_API UpdateHandler::removeDependent (FUnknown* u, IDependent* depe
 			for (uint32 count = 0; count < (*iter).count; count++)
 			{
 				if ((*iter).dependents[count] == dependent)
-					(*iter).dependents[count] = nullptr;
+					(*iter).dependents[count] = 0;
 			}
 		}
 		++iter;
@@ -286,8 +277,6 @@ tresult PLUGIN_API UpdateHandler::removeDependent (FUnknown* u, IDependent* depe
 			{
 				Update::DependentList& list = (*iterMap).second;
 				Update::DependentListIter iterList = list.begin ();
-				bool listIsEmpty = false;
-				
 				while (iterList != list.end ())
 				{
 #if CLASS_NAME_TRACKED
@@ -296,12 +285,6 @@ tresult PLUGIN_API UpdateHandler::removeDependent (FUnknown* u, IDependent* depe
 					if ((*iterList) == dependent)
 #endif
 					{
-						eraseCount = list.size ();
-						if (list.size () == 1u)
-						{
-							listIsEmpty = true;
-							break;
-						}
 						iterList = list.erase (iterList);
 					}
 					else
@@ -309,11 +292,7 @@ tresult PLUGIN_API UpdateHandler::removeDependent (FUnknown* u, IDependent* depe
 						++iterList;
 					}
 				}
-				
-				if (listIsEmpty)
-					iterMap = map.erase (iterMap);
-				else
-					++iterMap;
+				++iterMap;
 			}
 		}
 	}
@@ -331,11 +310,11 @@ tresult PLUGIN_API UpdateHandler::removeDependent (FUnknown* u, IDependent* depe
 		{
 			if (dependent == nullptr) // Remove all dependents of object
 			{
-				eraseCount  = iterList->second.size ();
 				map.erase (iterList);
 			}
 			else // Remove one dependent
 			{
+				int32 eraseCount = 0;
 				Update::DependentList& dependentlist = (*iterList).second;
 				Update::DependentListIter iterDependentlist = dependentlist.begin ();
 				while (iterDependentlist != dependentlist.end ())
@@ -372,6 +351,8 @@ tresult PLUGIN_API UpdateHandler::removeDependent (FUnknown* u, IDependent* depe
 //------------------------------------------------------------------------
 tresult UpdateHandler::doTriggerUpdates (FUnknown* u, int32 message, bool suppressUpdateDone)
 {
+	if (lockUpdates)
+		return kResultFalse;
 	IPtr<FUnknown> unknown = Update::getUnknownBase (u);
 	if (!unknown)
 		return kResultFalse;
@@ -613,7 +594,7 @@ tresult PLUGIN_API UpdateHandler::cancelUpdates (FUnknown* u)
 	FGuard guard (lock);
 
 	Update::DeferedChange change (unknown, 0);
-	while (true)
+	while (1)
 	{
 		auto iter = std::find (table->defered.begin (), table->defered.end (), change);
 		if (iter != table->defered.end ())

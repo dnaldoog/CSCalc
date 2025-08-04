@@ -1,33 +1,24 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
+   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+   End User License Agreement: www.juce.com/juce-6-licence
+   Privacy Policy: www.juce.com/juce-privacy-policy
 
-   Or:
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -36,14 +27,16 @@
 
 
 //==============================================================================
-class AndroidProjectExporter final : public ProjectExporter
+class AndroidProjectExporter  : public ProjectExporter
 {
 public:
     //==============================================================================
     bool isXcode() const override                { return false; }
     bool isVisualStudio() const override         { return false; }
+    bool isCodeBlocks() const override           { return false; }
     bool isMakefile() const override             { return false; }
     bool isAndroidStudio() const override        { return true;  }
+    bool isCLion() const override                { return false; }
 
     bool isAndroid() const override              { return true; }
     bool isWindows() const override              { return false; }
@@ -79,17 +72,9 @@ public:
         createOtherExporterProperties (props);
     }
 
-    void updateDeprecatedSettings() override
-    {
-        updateExternalReadPermission();
-        updateBluetoothPermission();
-    }
-
     static String getDisplayName()        { return "Android"; }
     static String getValueTreeTypeName()  { return "ANDROIDSTUDIO"; }
     static String getTargetFolderName()   { return "Android"; }
-
-    Identifier getExporterIdentifier() const override { return getValueTreeTypeName(); }
 
     static const char* getDefaultActivityClass()     { return "com.rmsl.juce.JuceActivity"; }
     static const char* getDefaultApplicationClass()  { return "com.rmsl.juce.JuceApp"; }
@@ -103,17 +88,12 @@ public:
     }
 
     //==============================================================================
-    ValueTreePropertyWithDefault androidJavaLibs, androidAdditionalJavaFolders, androidAdditionalResourceFolders, androidProjectRepositories,
-                                 androidRepositories, androidDependencies, androidCustomAppBuildGradleContent, androidScreenOrientation,
-                                 androidCustomActivityClass, androidCustomApplicationClass, androidManifestCustomXmlElements,
-                                 androidGradleSettingsContent, androidVersionCode, androidMinimumSDK, androidTargetSDK, androidTheme,
-                                 androidExtraAssetsFolder, androidOboeRepositoryPath, androidInternetNeeded, androidMicNeeded, androidCameraNeeded,
-                                 androidBluetoothScanNeeded, androidBluetoothAdvertiseNeeded, androidBluetoothConnectNeeded,
-                                 androidReadMediaAudioPermission, androidReadMediaImagesPermission,
-                                 androidReadMediaVideoPermission, androidExternalWritePermission,
-                                 androidInAppBillingPermission, androidVibratePermission, androidOtherPermissions, androidPushNotifications,
-                                 androidEnableRemoteNotifications, androidRemoteNotificationsConfigFile, androidEnableContentSharing, androidKeyStore,
-                                 androidKeyStorePass, androidKeyAlias, androidKeyAliasPass, gradleVersion, gradleToolchain, gradleClangTidy, androidPluginVersion;
+    ValueWithDefault androidJavaLibs, androidAdditionalJavaFolders, androidAdditionalResourceFolders, androidProjectRepositories, androidRepositories, androidDependencies, androidCustomAppBuildGradleContent,
+                     androidScreenOrientation, androidCustomActivityClass, androidCustomApplicationClass, androidManifestCustomXmlElements, androidGradleSettingsContent, androidVersionCode,
+                     androidMinimumSDK, androidTargetSDK, androidTheme, androidExtraAssetsFolder, androidOboeRepositoryPath, androidInternetNeeded, androidMicNeeded, androidCameraNeeded,
+                     androidBluetoothNeeded, androidExternalReadPermission, androidExternalWritePermission, androidInAppBillingPermission, androidVibratePermission, androidOtherPermissions,
+                     androidPushNotifications, androidEnableRemoteNotifications, androidRemoteNotificationsConfigFile, androidEnableContentSharing, androidKeyStore, androidKeyStorePass,
+                     androidKeyAlias, androidKeyAliasPass, gradleVersion, gradleToolchain, androidPluginVersion;
 
     //==============================================================================
     AndroidProjectExporter (Project& p, const ValueTree& t)
@@ -121,7 +101,7 @@ public:
           androidJavaLibs                      (settings, Ids::androidJavaLibs,                      getUndoManager()),
           androidAdditionalJavaFolders         (settings, Ids::androidAdditionalJavaFolders,         getUndoManager()),
           androidAdditionalResourceFolders     (settings, Ids::androidAdditionalResourceFolders,     getUndoManager()),
-          androidProjectRepositories           (settings, Ids::androidProjectRepositories,           getUndoManager(), "google()\nmavenCentral()"),
+          androidProjectRepositories           (settings, Ids::androidProjectRepositories,           getUndoManager(), "google()\njcenter()"),
           androidRepositories                  (settings, Ids::androidRepositories,                  getUndoManager()),
           androidDependencies                  (settings, Ids::androidDependencies,                  getUndoManager()),
           androidCustomAppBuildGradleContent   (settings, Ids::androidCustomAppBuildGradleContent,   getUndoManager()),
@@ -131,20 +111,16 @@ public:
           androidManifestCustomXmlElements     (settings, Ids::androidManifestCustomXmlElements,     getUndoManager()),
           androidGradleSettingsContent         (settings, Ids::androidGradleSettingsContent,         getUndoManager()),
           androidVersionCode                   (settings, Ids::androidVersionCode,                   getUndoManager(), "1"),
-          androidMinimumSDK                    (settings, Ids::androidMinimumSDK,                    getUndoManager(), "24"),
-          androidTargetSDK                     (settings, Ids::androidTargetSDK,                     getUndoManager(), "35"),
+          androidMinimumSDK                    (settings, Ids::androidMinimumSDK,                    getUndoManager(), "16"),
+          androidTargetSDK                     (settings, Ids::androidTargetSDK,                     getUndoManager(), "29"),
           androidTheme                         (settings, Ids::androidTheme,                         getUndoManager()),
           androidExtraAssetsFolder             (settings, Ids::androidExtraAssetsFolder,             getUndoManager()),
           androidOboeRepositoryPath            (settings, Ids::androidOboeRepositoryPath,            getUndoManager()),
           androidInternetNeeded                (settings, Ids::androidInternetNeeded,                getUndoManager(), true),
           androidMicNeeded                     (settings, Ids::microphonePermissionNeeded,           getUndoManager(), false),
           androidCameraNeeded                  (settings, Ids::cameraPermissionNeeded,               getUndoManager(), false),
-          androidBluetoothScanNeeded           (settings, Ids::androidBluetoothScanNeeded,           getUndoManager(), false),
-          androidBluetoothAdvertiseNeeded      (settings, Ids::androidBluetoothAdvertiseNeeded,      getUndoManager(), false),
-          androidBluetoothConnectNeeded        (settings, Ids::androidBluetoothConnectNeeded,        getUndoManager(), false),
-          androidReadMediaAudioPermission      (settings, Ids::androidReadMediaAudioPermission,      getUndoManager(), true),
-          androidReadMediaImagesPermission     (settings, Ids::androidReadMediaImagesPermission,     getUndoManager(), true),
-          androidReadMediaVideoPermission      (settings, Ids::androidReadMediaVideoPermission,      getUndoManager(), true),
+          androidBluetoothNeeded               (settings, Ids::androidBluetoothNeeded,               getUndoManager(), true),
+          androidExternalReadPermission        (settings, Ids::androidExternalReadNeeded,            getUndoManager(), true),
           androidExternalWritePermission       (settings, Ids::androidExternalWriteNeeded,           getUndoManager(), true),
           androidInAppBillingPermission        (settings, Ids::androidInAppBilling,                  getUndoManager(), false),
           androidVibratePermission             (settings, Ids::androidVibratePermissionNeeded,       getUndoManager(), false),
@@ -157,10 +133,9 @@ public:
           androidKeyStorePass                  (settings, Ids::androidKeyStorePass,                  getUndoManager(), "android"),
           androidKeyAlias                      (settings, Ids::androidKeyAlias,                      getUndoManager(), "androiddebugkey"),
           androidKeyAliasPass                  (settings, Ids::androidKeyAliasPass,                  getUndoManager(), "android"),
-          gradleVersion                        (settings, Ids::gradleVersion,                        getUndoManager(), "8.11.1"),
+          gradleVersion                        (settings, Ids::gradleVersion,                        getUndoManager(), "6.1.1"),
           gradleToolchain                      (settings, Ids::gradleToolchain,                      getUndoManager(), "clang"),
-          gradleClangTidy                      (settings, Ids::gradleClangTidy,                      getUndoManager(), false),
-          androidPluginVersion                 (settings, Ids::androidPluginVersion,                 getUndoManager(), "8.10.0"),
+          androidPluginVersion                 (settings, Ids::androidPluginVersion,                 getUndoManager(), "4.0.0"),
           AndroidExecutable                    (getAppSettings().getStoredPath (Ids::androidStudioExePath, TargetOS::getThisOS()).get().toString())
     {
         name = getDisplayName();
@@ -171,7 +146,7 @@ public:
     void createToolchainExporterProperties (PropertyListBuilder& props)
     {
         props.add (new TextPropertyComponent (gradleVersion, "Gradle Version", 32, false),
-                   "The version of gradle that is used to build this app");
+                   "The version of gradle that is used to build this app (4.10 is fine for JUCE)");
 
         props.add (new TextPropertyComponent (androidPluginVersion, "Android Plug-in Version", 32, false),
                    "The version of the android build plugin for gradle that is used to build this app");
@@ -180,9 +155,6 @@ public:
                                                 { "clang", "gcc" },
                                                 { "clang", "gcc" }),
                    "The toolchain that gradle should invoke for NDK compilation (variable model.android.ndk.tooclhain in app/build.gradle)");
-
-        props.add (new ChoicePropertyComponent (gradleClangTidy, "Use Clang-Tidy"),
-                   "If enabled and the toolchain is clang this will run clang-tidy when compiling.");
     }
 
     //==============================================================================
@@ -219,7 +191,6 @@ public:
         writeFile (targetFolder, "build.gradle",                             getProjectBuildGradleFileContent());
         writeFile (appFolder,    "build.gradle",                             getAppBuildGradleFileContent (modules));
         writeFile (targetFolder, "local.properties",                         getLocalPropertiesFileContent());
-        writeFile (targetFolder, "gradle.properties",                        getGradlePropertiesFileContent());
         writeFile (targetFolder, "gradle/wrapper/gradle-wrapper.properties", getGradleWrapperPropertiesFileContent());
 
         writeBinaryFile (targetFolder, "gradle/wrapper/LICENSE-for-gradlewrapper.txt", BinaryData::LICENSE,           BinaryData::LICENSESize);
@@ -244,7 +215,7 @@ public:
 
         if (androidExtraAssetsFolderValue.isNotEmpty())
         {
-            auto extraAssets = getProject().getFile().getSiblingFile (androidExtraAssetsFolderValue);
+            auto extraAssets = getProject().getFile().getParentDirectory().getChildFile (androidExtraAssetsFolderValue);
 
             if (extraAssets.exists() && extraAssets.isDirectory())
             {
@@ -285,7 +256,7 @@ public:
 
 protected:
     //==============================================================================
-    class AndroidBuildConfiguration final : public BuildConfiguration
+    class AndroidBuildConfiguration  : public BuildConfiguration
     {
     public:
         AndroidBuildConfiguration (Project& p, const ValueTree& settings, const ProjectExporter& e)
@@ -356,9 +327,9 @@ protected:
             return "${ANDROID_ABI}";
         }
 
-        ValueTreePropertyWithDefault androidArchitectures, androidBuildConfigRemoteNotifsConfigFile,
-                                     androidAdditionalXmlValueResources, androidAdditionalDrawableResources,
-                                     androidAdditionalRawValueResources, androidCustomStringXmlElements;
+        ValueWithDefault androidArchitectures, androidBuildConfigRemoteNotifsConfigFile,
+                         androidAdditionalXmlValueResources, androidAdditionalDrawableResources,
+                         androidAdditionalRawValueResources, androidCustomStringXmlElements;
     };
 
     BuildConfiguration::Ptr createBuildConfig (const ValueTree& v) const override
@@ -367,48 +338,17 @@ protected:
     }
 
 private:
-    void updateExternalReadPermission()
-    {
-        const auto needsExternalRead = getSettingString (Ids::androidExternalReadNeeded);
-        settings.removeProperty (Ids::androidExternalReadNeeded, nullptr);
-
-        if (needsExternalRead.isEmpty())
-            return;
-
-        androidReadMediaAudioPermission .setValue (needsExternalRead, nullptr);
-        androidReadMediaImagesPermission.setValue (needsExternalRead, nullptr);
-        androidReadMediaVideoPermission .setValue (needsExternalRead, nullptr);
-    }
-
-    void updateBluetoothPermission()
-    {
-        const auto needsBluetooth = getSettingString (Ids::androidBluetoothNeeded);
-        settings.removeProperty (Ids::androidBluetoothNeeded, nullptr);
-
-        if (needsBluetooth.isEmpty())
-            return;
-
-        androidBluetoothScanNeeded     .setValue (needsBluetooth, nullptr);
-        androidBluetoothAdvertiseNeeded.setValue (needsBluetooth, nullptr);
-        androidBluetoothConnectNeeded  .setValue (needsBluetooth, nullptr);
-    }
-
     void writeCmakeFile (const File& file) const
     {
         build_tools::writeStreamToFile (file, [&] (MemoryOutputStream& mo)
         {
             mo.setNewLineString (getNewLineString());
 
-            mo << "# Automatically generated CMakeLists, created by the Projucer" << newLine
+            mo << "# Automatically generated makefile, created by the Projucer" << newLine
                << "# Don't edit this file! Your changes will be overwritten when you re-save the Projucer project!" << newLine
-               << newLine
-               << "cmake_minimum_required(VERSION 3.22)" << newLine
-               << newLine
-               << "project(juce_jni_project)" << newLine
                << newLine;
 
-            if (gradleClangTidy.get())
-                mo << "set(CMAKE_CXX_CLANG_TIDY \"${ANDROID_TOOLCHAIN_ROOT}/bin/clang-tidy\")" << newLine << newLine;
+            mo << "cmake_minimum_required(VERSION 3.4.1)" << newLine << newLine;
 
             if (! isLibrary())
                 mo << "set(BINARY_NAME \"juce_jni\")" << newLine << newLine;
@@ -461,9 +401,17 @@ private:
                 mo << ")" << newLine << newLine;
             }
 
+            auto cfgExtraLinkerFlags = getExtraLinkerFlagsString();
+            if (cfgExtraLinkerFlags.isNotEmpty())
+            {
+                mo << "set( JUCE_LDFLAGS \"" << cfgExtraLinkerFlags.replace ("\"", "\\\"") << "\")" << newLine;
+                mo << "set( CMAKE_SHARED_LINKER_FLAGS  \"${CMAKE_EXE_LINKER_FLAGS} ${JUCE_LDFLAGS}\")" << newLine << newLine;
+            }
+
             mo << "enable_language(ASM)" << newLine << newLine;
 
-            const auto userLibraries = getUserLibraries();
+            auto userLibraries = StringArray::fromTokens (getExternalLibrariesString(), ";", "");
+            userLibraries.addArray (androidLibs);
 
             if (getNumConfigurations() > 0)
             {
@@ -504,14 +452,6 @@ private:
                     if (cfgDefines.size() > 0)
                         mo << "    add_definitions(" << getEscapedPreprocessorDefs (cfgDefines).joinIntoString (" ") << ")" << newLine;
 
-                    const auto cfgExtraLinkerFlags = cfg.getAllLinkerFlagsString();
-
-                    if (cfgExtraLinkerFlags.isNotEmpty())
-                    {
-                        mo << "    set( JUCE_LDFLAGS \"" << cfgExtraLinkerFlags.replace ("\"", "\\\"") << "\" )"       << newLine
-                           << "    set( CMAKE_SHARED_LINKER_FLAGS  \"${CMAKE_SHARED_LINKER_FLAGS} ${JUCE_LDFLAGS}\" )" << newLine << newLine;
-                    }
-
                     writeCmakePathLines (mo, "    ", "include_directories( AFTER", cfgHeaderPaths);
 
                     if (userLibraries.size() > 0)
@@ -549,7 +489,7 @@ private:
 
                 if (! first)
                 {
-                    ProjectExporter::BuildConfiguration::Ptr config (getConfiguration (0));
+                    ProjectExporter::BuildConfiguration::Ptr config (getConfiguration(0));
 
                     if (config)
                     {
@@ -575,12 +515,9 @@ private:
 
             if (excludeFromBuild.size() > 0)
             {
-                mo << "set_source_files_properties(" << newLine;
-
                 for (auto& exclude : excludeFromBuild)
-                    mo << "    \"" << exclude.toUnixStyle() << '"' << newLine;
+                    mo << "set_source_files_properties(\"" << exclude.toUnixStyle() << "\" PROPERTIES HEADER_FILE_ONLY TRUE)" << newLine;
 
-                mo << "    PROPERTIES HEADER_FILE_ONLY TRUE)" << newLine;
                 mo << newLine;
             }
 
@@ -592,27 +529,23 @@ private:
                 mo << newLine;
             }
 
+            auto flags = getProjectCompilerFlags();
+
+            if (flags.size() > 0)
+                mo << "target_compile_options( ${BINARY_NAME} PRIVATE " << flags.joinIntoString (" ") << " )" << newLine << newLine;
+
             for (ConstConfigIterator config (*this); config.next();)
             {
                 auto& cfg = dynamic_cast<const AndroidBuildConfiguration&> (*config);
 
-                mo << "if( JUCE_BUILD_CONFIGURATION MATCHES \"" << cfg.getProductFlavourCMakeIdentifier() << "\" )" << newLine
-                   << "    target_compile_options( ${BINARY_NAME} PRIVATE";
+                mo << "if( JUCE_BUILD_CONFIGURATION MATCHES \"" << cfg.getProductFlavourCMakeIdentifier() << "\" )" << newLine;
+                mo << "    target_compile_options( ${BINARY_NAME} PRIVATE";
 
-                const auto recommendedFlags = cfg.getRecommendedCompilerWarningFlags();
+                for (auto& flag : cfg.getRecommendedCompilerWarningFlags())
+                    mo << " " << flag;
 
-                for (auto& recommendedFlagsType : { recommendedFlags.common, recommendedFlags.cpp })
-                    for (auto& flag : recommendedFlagsType)
-                        mo << " " << flag;
-
-                const auto flags = getConfigCompilerFlags (cfg);
-
-                if (! flags.isEmpty())
-                    mo << " " << flags.joinIntoString (" ");
-
-                mo << " )"      << newLine
-                   << "endif()" << newLine
-                   <<              newLine;
+                mo << ")" << newLine;
+                mo << "endif()" << newLine << newLine;
             }
 
             auto libraries = getAndroidLibraries();
@@ -624,6 +557,7 @@ private:
                 mo << newLine;
             }
 
+            libraries.addArray (userLibraries);
             mo << "target_link_libraries( ${BINARY_NAME}";
             if (libraries.size() > 0)
             {
@@ -638,9 +572,6 @@ private:
             if (useOboe)
                 mo << "    \"oboe\"" << newLine;
 
-            for (auto& lib : userLibraries)
-                mo << "    [[" << lib << "]]" << newLine;
-
             mo << ")" << newLine;
         });
     }
@@ -651,7 +582,7 @@ private:
         MemoryOutputStream mo;
         mo.setNewLineString (getNewLineString());
 
-        mo << "rootProject.name = " << "\'" << escapeQuotes (projectName) << "\'" << newLine;
+        mo << "rootProject.name = " << "\'" << projectName << "\'" << newLine;
         mo << (isLibrary() ? "include ':lib'" : "include ':app'");
 
         auto extraContent = androidGradleSettingsContent.get().toString();
@@ -670,7 +601,7 @@ private:
         mo << "buildscript {"                                                                              << newLine;
         mo << "   repositories {"                                                                          << newLine;
         mo << "       google()"                                                                            << newLine;
-        mo << "       mavenCentral()"                                                                      << newLine;
+        mo << "       jcenter()"                                                                           << newLine;
         mo << "   }"                                                                                       << newLine;
         mo << "   dependencies {"                                                                          << newLine;
         mo << "       classpath 'com.android.tools.build:gradle:" << androidPluginVersion.get().toString() << "'" << newLine;
@@ -696,17 +627,11 @@ private:
 
         mo << "apply plugin: 'com.android." << (isLibrary() ? "library" : "application") << "'" << newLine << newLine;
 
-        // NDK 26 is required for ANDROID_WEAK_API_DEFS, which is in turn required for weak-linking AFontMatcher
-        mo << "def ndkVersionString = \"28.1.13356709\"" << newLine << newLine;
-
         mo << "android {"                                                                    << newLine;
-        mo << "    compileSdk " << static_cast<int> (androidTargetSDK.get())                 << newLine;
-        mo << "    ndkVersion ndkVersionString"                                              << newLine;
-        mo << "    namespace " << project.getBundleIdentifierString().toLowerCase().quoted() << newLine;
+        mo << "    compileSdkVersion " << static_cast<int> (androidTargetSDK.get())          << newLine;
         mo << "    externalNativeBuild {"                                                    << newLine;
         mo << "        cmake {"                                                              << newLine;
         mo << "            path \"CMakeLists.txt\""                                          << newLine;
-        mo << "            version \"3.22.1\""                                               << newLine;
         mo << "        }"                                                                    << newLine;
         mo << "    }"                                                                        << newLine;
 
@@ -743,25 +668,32 @@ private:
 
             if (cfg.getArchitectures().isNotEmpty())
             {
-                mo << "            ndk {" << newLine
-                   << "                abiFilters " << toGradleList (StringArray::fromTokens (cfg.getArchitectures(),  " ", "")) << newLine
-                   << "            }" << newLine;
+                mo << "            ndk {" << newLine;
+                mo << "                abiFilters " << toGradleList (StringArray::fromTokens (cfg.getArchitectures(),  " ", "")) << newLine;
+                mo << "            }" << newLine;
             }
 
-            mo << "            externalNativeBuild {" << newLine
-               << "                cmake {"           << newLine;
+            mo << "            externalNativeBuild {" << newLine;
+            mo << "                cmake {"           << newLine;
 
             if (getProject().getProjectType().isStaticLibrary())
                 mo << "                    targets \"" << getNativeModuleBinaryName (cfg) << "\"" << newLine;
 
-            mo << "                    cFlags    \"-O" << cfg.getGCCOptimisationFlag() << "\""                                      << newLine
-               << "                    cppFlags  \"-O" << cfg.getGCCOptimisationFlag() << "\""                                      << newLine
-               << "                    arguments \"-DJUCE_BUILD_CONFIGURATION=" << cfg.getProductFlavourCMakeIdentifier() << "\""   << newLine
-               << "                }"                                                                                               << newLine
-               << "            }"                                                                                                   << newLine
-                                                                                                                                    << newLine
-               << "            dimension \"default\""                                                                               << newLine
-               << "        }"                                                                                                       << newLine;
+            mo << "                    arguments "
+               << "\"-DJUCE_BUILD_CONFIGURATION=" << cfg.getProductFlavourCMakeIdentifier() << "\"";
+
+            mo << ", \"-DCMAKE_CXX_FLAGS_" << (cfg.isDebug() ? "DEBUG" : "RELEASE")
+               << "=-O" << cfg.getGCCOptimisationFlag();
+
+            mo << "\""
+               << ", \"-DCMAKE_C_FLAGS_"   << (cfg.isDebug() ? "DEBUG" : "RELEASE")
+               << "=-O" << cfg.getGCCOptimisationFlag()
+               << "\"" << newLine;
+
+            mo << "                }"                   << newLine;
+            mo << "            }"                       << newLine << newLine;
+            mo << "            dimension \"default\""   << newLine;
+            mo << "       }"                            << newLine;
         }
 
         mo << "    }" << newLine;
@@ -831,7 +763,7 @@ private:
         auto numConfigs = getNumConfigurations();
         for (int i = 0; i < numConfigs; ++i)
         {
-            auto config = getConfiguration (i);
+            auto config = getConfiguration(i);
 
             if (config->isDebug()) numDebugConfigs++;
 
@@ -925,7 +857,7 @@ private:
             mo << "        implementation files('libs/" << File (d).getFileName() << "')" << newLine;
 
         if (isInAppBillingEnabled())
-            mo << "        implementation 'com.android.billingclient:billing:7.0.0'" << newLine;
+            mo << "        implementation 'com.android.billingclient:billing:2.1.0'" << newLine;
 
         if (areRemoteNotificationsEnabled())
         {
@@ -949,7 +881,7 @@ private:
         return mo.toString();
     }
 
-    void addModuleJavaFolderToSourceSet (StringArray& javaSourceSets, const File& source) const
+    void addModuleJavaFolderToSourceSet(StringArray& javaSourceSets, const File& source) const
     {
         if (source.isDirectory())
         {
@@ -1069,16 +1001,6 @@ private:
         return replaceLineFeeds (props, getNewLineString());
     }
 
-    String getGradlePropertiesFileContent() const
-    {
-        String result;
-
-        // Silences warning when Google Play Billing v7 is enabled
-        result << "android.useAndroidX=true" << newLine;
-
-        return replaceLineFeeds (result, getNewLineString());
-    }
-
     String getGradleWrapperPropertiesFileContent() const
     {
         String props;
@@ -1145,7 +1067,7 @@ private:
                    "An integer value that represents the version of the application code, relative to other versions.");
 
         props.add (new TextPropertyComponent (androidMinimumSDK, "Minimum SDK Version", 32, false),
-                   "The number of the minimum version of the Android SDK that the app requires (must be 24 or higher).");
+                   "The number of the minimum version of the Android SDK that the app requires (must be 16 or higher).");
 
         props.add (new TextPropertyComponent (androidTargetSDK, "Target SDK Version", 32, false),
                    "The number of the version of the Android SDK that the app is targeting.");
@@ -1171,23 +1093,11 @@ private:
         props.add (new ChoicePropertyComponent (androidCameraNeeded, "Camera Required"),
                    "If enabled, this will set the android.permission.CAMERA flag in the manifest.");
 
-        props.add (new ChoicePropertyComponent (androidBluetoothScanNeeded, "Bluetooth Scan Required"),
-                   "If enabled, this will set the android.permission.BLUETOOTH_SCAN, android.permission.BLUETOOTH and android.permission.BLUETOOTH_ADMIN flags in the manifest. This is required for Bluetooth MIDI on Android.");
+        props.add (new ChoicePropertyComponent (androidBluetoothNeeded, "Bluetooth Permissions Required"),
+                   "If enabled, this will set the android.permission.BLUETOOTH and  android.permission.BLUETOOTH_ADMIN flag in the manifest. This is required for Bluetooth MIDI on Android.");
 
-        props.add (new ChoicePropertyComponent (androidBluetoothAdvertiseNeeded, "Bluetooth Advertise Required"),
-                   "If enabled, this will set the android.permission.BLUETOOTH_ADVERTISE, android.permission.BLUETOOTH and android.permission.BLUETOOTH_ADMIN flags in the manifest.");
-
-        props.add (new ChoicePropertyComponent (androidBluetoothConnectNeeded, "Bluetooth Connect Required"),
-                   "If enabled, this will set the android.permission.BLUETOOTH_CONNECT, android.permission.BLUETOOTH and android.permission.BLUETOOTH_ADMIN flags in the manifest. This is required for Bluetooth MIDI on Android.");
-
-        props.add (new ChoicePropertyComponent (androidReadMediaAudioPermission, "Read Audio From External Storage"),
-                   "If enabled, this will set the android.permission.READ_MEDIA_AUDIO and android.permission.READ_EXTERNAL_STORAGE flags in the manifest.");
-
-        props.add (new ChoicePropertyComponent (androidReadMediaImagesPermission, "Read Images From External Storage"),
-                   "If enabled, this will set the android.permission.READ_MEDIA_IMAGES and android.permission.READ_EXTERNAL_STORAGE flags in the manifest.");
-
-        props.add (new ChoicePropertyComponent (androidReadMediaVideoPermission, "Read Video From External Storage"),
-                   "If enabled, this will set the android.permission.READ_MEDIA_VIDEO and android.permission.READ_EXTERNAL_STORAGE flags in the manifest.");
+        props.add (new ChoicePropertyComponent (androidExternalReadPermission, "Read From External Storage"),
+                   "If enabled, this will set the android.permission.READ_EXTERNAL_STORAGE flag in the manifest.");
 
         props.add (new ChoicePropertyComponent (androidExternalWritePermission, "Write to External Storage"),
                    "If enabled, this will set the android.permission.WRITE_EXTERNAL_STORAGE flag in the manifest.");
@@ -1284,7 +1194,7 @@ private:
                 if (remoteNotifsConfigFilePath.isEmpty())
                     remoteNotifsConfigFilePath = androidRemoteNotificationsConfigFile.get().toString();
 
-                File file (getProject().getFile().getSiblingFile (remoteNotifsConfigFilePath));
+                File file (getProject().getFile().getChildFile (remoteNotifsConfigFilePath));
                 // Settings file must be present for remote notifications to work and it must be called google-services.json.
                 jassert (file.existsAsFile() && file.getFileName() == "google-services.json");
 
@@ -1303,7 +1213,7 @@ private:
 
         for (auto& path : resourcePaths)
         {
-            auto file = getProject().getFile().getSiblingFile (path);
+            auto file = getProject().getFile().getChildFile (path);
 
             jassert (file.exists());
 
@@ -1361,12 +1271,11 @@ private:
 
     String getAppPlatform() const
     {
-        return "android-" + androidMinimumSDK.get().toString();
-    }
+        auto ndkVersion = static_cast<int> (androidMinimumSDK.get());
+        if (ndkVersion == 9)
+            ndkVersion = 10; // (doesn't seem to be a version '9')
 
-    static String escapeQuotes (const String& str)
-    {
-        return str.replace ("'", "\\'").replace ("\"", "\\\"");
+        return "android-" + String (ndkVersion);
     }
 
     //==============================================================================
@@ -1377,7 +1286,7 @@ private:
             auto& cfg = dynamic_cast<const AndroidBuildConfiguration&> (*config);
 
             String customStringsXmlContent ("<resources>\n");
-            customStringsXmlContent << "<string name=\"app_name\">" << escapeQuotes (projectName) << "</string>\n";
+            customStringsXmlContent << "<string name=\"app_name\">" << projectName << "</string>\n";
             customStringsXmlContent << cfg.getCustomStringsXml();
             customStringsXmlContent << "\n</resources>";
 
@@ -1457,10 +1366,8 @@ private:
     }
 
     //==============================================================================
-    void addCompileUnits (const Project::Item& projectItem,
-                          MemoryOutputStream& mo,
-                          Array<build_tools::RelativePath>& excludeFromBuild,
-                          Array<std::pair<build_tools::RelativePath, String>>& extraCompilerFlags) const
+    void addCompileUnits (const Project::Item& projectItem, MemoryOutputStream& mo,
+                          Array<build_tools::RelativePath>& excludeFromBuild, Array<std::pair<build_tools::RelativePath, String>>& extraCompilerFlags) const
     {
         if (projectItem.isGroup())
         {
@@ -1485,7 +1392,7 @@ private:
             }
             else
             {
-                auto extraFlags = getCompilerFlagsForProjectItem (projectItem);
+                auto extraFlags = compilerFlagSchemesMap[projectItem.getCompilerFlagSchemeString()].get().toString();
 
                 if (extraFlags.isNotEmpty())
                     extraCompilerFlags.add ({ file, extraFlags });
@@ -1493,12 +1400,11 @@ private:
         }
     }
 
-    void addCompileUnits (MemoryOutputStream& mo,
-                          Array<build_tools::RelativePath>& excludeFromBuild,
+    void addCompileUnits (MemoryOutputStream& mo, Array<build_tools::RelativePath>& excludeFromBuild,
                           Array<std::pair<build_tools::RelativePath, String>>& extraCompilerFlags) const
     {
         for (int i = 0; i < getAllGroups().size(); ++i)
-            addCompileUnits (getAllGroups().getReference (i), mo, excludeFromBuild, extraCompilerFlags);
+            addCompileUnits (getAllGroups().getReference(i), mo, excludeFromBuild, extraCompilerFlags);
     }
 
     //==============================================================================
@@ -1516,15 +1422,12 @@ private:
         cmakeArgs.add ("\"-DANDROID_ARM_MODE=arm\"");
         cmakeArgs.add ("\"-DANDROID_ARM_NEON=TRUE\"");
 
-        // This enables macOS/iOS-style weak-linking for symbols in the NDK, but is only available in NDK 26+
-        cmakeArgs.add ("\"-DANDROID_WEAK_API_DEFS=ON\"");
-
         auto cppStandard = [this]
         {
             auto projectStandard = project.getCppStandardString();
 
             if (projectStandard == "latest")
-                return project.getLatestNumberedCppStandardString();
+                return String ("17");
 
             return projectStandard;
         }();
@@ -1544,10 +1447,10 @@ private:
         return cFlags;
     }
 
-    StringArray getConfigCompilerFlags (const BuildConfiguration& config) const
+    StringArray getProjectCompilerFlags() const
     {
         auto cFlags = getAndroidCompilerFlags();
-        cFlags.addArray (getEscapedFlags (StringArray::fromTokens (config.getAllCompilerFlagsString(), true)));
+        cFlags.addArray (getEscapedFlags (StringArray::fromTokens (getExtraCompilerFlagsString(), true)));
         return cFlags;
     }
 
@@ -1571,7 +1474,8 @@ private:
         if (isContentSharingEnabled())
             defines.set ("JUCE_CONTENT_SHARING", "1");
 
-        defines.set ("JUCE_ANDROID_GL_ES_VERSION_3_0", "1");
+        if (supportsGLv3())
+            defines.set ("JUCE_ANDROID_GL_ES_VERSION_3_0", "1");
 
         if (areRemoteNotificationsEnabled())
         {
@@ -1607,27 +1511,13 @@ private:
     }
 
     //==============================================================================
-    StringArray getUserLibraries() const
-    {
-        auto userLibraries = StringArray::fromTokens (getExternalLibrariesString(), ";", "");
-        userLibraries = getCleanedStringArray (userLibraries);
-
-        const auto ppDefs = getAllPreprocessorDefs();
-
-        for (auto& lib : userLibraries)
-            lib = build_tools::replacePreprocessorDefs (ppDefs, lib);
-
-        userLibraries.addArray (androidLibs);
-        return userLibraries;
-    }
-
     StringArray getAndroidLibraries() const
     {
         StringArray libraries;
 
         libraries.add ("log");
         libraries.add ("android");
-        libraries.add ("GLESv3");
+        libraries.add (supportsGLv3() ? "GLESv3" : "GLESv2");
         libraries.add ("EGL");
 
         return libraries;
@@ -1672,13 +1562,20 @@ private:
 
         for (int i = 0; i < defs.size(); ++i)
         {
-            auto escaped = "[[-D" + defs.getAllKeys()[i];
+            auto escaped = "\"-D" + defs.getAllKeys()[i];
             auto value = defs.getAllValues()[i];
 
             if (value.isNotEmpty())
-                escaped += ("=" + value);
+            {
+                value = value.replace ("\"", "\\\"");
 
-            escapedDefs.add (escaped + "]]");
+                if (value.containsChar (L' ') && ! value.startsWith ("\\\"") && ! value.endsWith ("\\\""))
+                    value = "\\\"" + value + "\\\"";
+
+                escaped += ("=" + value);
+            }
+
+            escapedDefs.add (escaped + "\"");
         }
 
         return escapedDefs;
@@ -1689,7 +1586,7 @@ private:
         StringArray escaped;
 
         for (auto& flag : flags)
-            escaped.add ("[[" + flag + "]]");
+            escaped.add ("\"" + flag + "\"");
 
         return escaped;
     }
@@ -1706,10 +1603,6 @@ private:
         if (! isLibrary())
         {
             auto* app = createApplicationElement (*manifest);
-
-            auto* receiver = getOrCreateChildWithName (*app, "receiver");
-            setAttributeIfNotPresent (*receiver, "android:name", "com.rmsl.juce.Receiver");
-            setAttributeIfNotPresent (*receiver, "android:exported", "false");
 
             auto* act = createActivityElement (*app);
             createIntentElement (*act);
@@ -1731,6 +1624,7 @@ private:
         setAttributeIfNotPresent (*manifest, "xmlns:android", "http://schemas.android.com/apk/res/android");
         setAttributeIfNotPresent (*manifest, "android:versionCode", androidVersionCode.get());
         setAttributeIfNotPresent (*manifest, "android:versionName",  project.getVersionString());
+        setAttributeIfNotPresent (*manifest, "package", project.getBundleIdentifierString());
 
         return manifest;
     }
@@ -1761,36 +1655,7 @@ private:
         }
 
         for (int i = permissions.size(); --i >= 0;)
-        {
-            const auto permission = permissions[i];
-            auto* usesPermission = manifest.createNewChildElement ("uses-permission");
-            usesPermission->setAttribute ("android:name", permission);
-
-            // This permission only has an effect on SDK version 28 and lower
-            if (permission == "android.permission.WRITE_EXTERNAL_STORAGE")
-                usesPermission->setAttribute ("android:maxSdkVersion", "28");
-
-            // https://developer.android.com/training/data-storage/shared/documents-files
-            // If the SDK version is <= 28, READ_EXTERNAL_STORAGE is required to access any
-            // media file, including files created by the current app.
-            // If the SDK version is <= 32, READ_EXTERNAL_STORAGE is required to access other
-            // apps' media files.
-            // This permission has no effect on later Android versions.
-            if (permission == "android.permission.READ_EXTERNAL_STORAGE")
-                usesPermission->setAttribute ("android:maxSdkVersion", "32");
-
-            if (permission == "android.permission.BLUETOOTH_SCAN")
-                usesPermission->setAttribute ("android:usesPermissionFlags", "neverForLocation");
-
-            // These permissions are obsoleted by new more fine-grained permissions in API level 31
-            if (permission == "android.permission.BLUETOOTH"
-                || permission == "android.permission.BLUETOOTH_ADMIN"
-                || permission == "android.permission.ACCESS_FINE_LOCATION"
-                || permission == "android.permission.ACCESS_COARSE_LOCATION")
-            {
-                usesPermission->setAttribute ("android:maxSdkVersion", "30");
-            }
-        }
+            manifest.createNewChildElement ("uses-permission")->setAttribute ("android:name", permissions[i]);
     }
 
     void createOpenGlFeatureElement (XmlElement& manifest) const
@@ -1811,7 +1676,7 @@ private:
             if (glVersion == nullptr)
                 glVersion = manifest.createNewChildElement ("uses-feature");
 
-            setAttributeIfNotPresent (*glVersion, "android:glEsVersion", "0x00030000");
+            setAttributeIfNotPresent (*glVersion, "android:glEsVersion", (static_cast<int> (androidMinimumSDK.get()) >= 18 ? "0x00030000" : "0x00020000"));
             setAttributeIfNotPresent (*glVersion, "android:required", "true");
         }
     }
@@ -1833,8 +1698,15 @@ private:
                 app->setAttribute ("android:icon", "@drawable/icon");
         }
 
-        if (! app->hasAttribute ("android:hardwareAccelerated"))
-            app->setAttribute ("android:hardwareAccelerated", "false"); // (using the 2D acceleration slows down openGL)
+        if (static_cast<int> (androidMinimumSDK.get()) >= 11)
+        {
+            if (! app->hasAttribute ("android:hardwareAccelerated"))
+                app->setAttribute ("android:hardwareAccelerated", "false"); // (using the 2D acceleration slows down openGL)
+        }
+        else
+        {
+            app->removeAttribute ("android:hardwareAccelerated");
+        }
 
         return app;
     }
@@ -1844,13 +1716,37 @@ private:
         auto* act = getOrCreateChildWithName (application, "activity");
 
         setAttributeIfNotPresent (*act, "android:name", getActivityClassString());
+        setAttributeIfNotPresent (*act, "android:label", "@string/app_name");
 
         if (! act->hasAttribute ("android:configChanges"))
-            act->setAttribute ("android:configChanges", "keyboard|keyboardHidden|orientation|screenSize|navigation");
+        {
+            String configChanges ("keyboardHidden|orientation");
+            if (static_cast<int> (androidMinimumSDK.get()) >= 13)
+                configChanges += "|screenSize";
+
+            act->setAttribute ("android:configChanges", configChanges);
+        }
+        else
+        {
+            auto configChanges = act->getStringAttribute ("android:configChanges");
+
+            if (static_cast<int> (androidMinimumSDK.get()) < 13 && configChanges.contains ("screenSize"))
+            {
+                configChanges = configChanges.replace ("|screenSize", "")
+                                             .replace ("screenSize|", "")
+                                             .replace ("screenSize", "");
+
+                act->setAttribute ("android:configChanges", configChanges);
+            }
+        }
 
         if (androidScreenOrientation.get() == "landscape")
         {
-            setAttributeIfNotPresent (*act, "android:screenOrientation", "userLandscape");
+            String landscapeString = static_cast<int> (androidMinimumSDK.get()) < 9
+                                   ? "landscape"
+                                   : (static_cast<int> (androidMinimumSDK.get()) < 18 ? "sensorLandscape" : "userLandscape");
+
+            setAttributeIfNotPresent (*act, "android:screenOrientation", landscapeString);
         }
         else
         {
@@ -1862,10 +1758,15 @@ private:
         // Using the 2D acceleration slows down OpenGL. We *do* enable it here for the activity though, and we disable it
         // in each ComponentPeerView instead. This way any embedded native views, which are not children of ComponentPeerView,
         // can still use hardware acceleration if needed (e.g. web view).
-        if (! act->hasAttribute ("android:hardwareAccelerated"))
-            act->setAttribute ("android:hardwareAccelerated", "true"); // (using the 2D acceleration slows down openGL)
-
-        act->setAttribute ("android:exported", "true");
+        if (static_cast<int> (androidMinimumSDK.get()) >= 11)
+        {
+            if (! act->hasAttribute ("android:hardwareAccelerated"))
+                act->setAttribute ("android:hardwareAccelerated", "true"); // (using the 2D acceleration slows down openGL)
+        }
+        else
+        {
+            act->removeAttribute ("android:hardwareAccelerated");
+        }
 
         return act;
     }
@@ -1946,40 +1847,15 @@ private:
         if (androidCameraNeeded.get())
             s.add ("android.permission.CAMERA");
 
-        if (androidBluetoothScanNeeded.get())
-            s.add ("android.permission.BLUETOOTH_SCAN");
-
-        if (androidBluetoothAdvertiseNeeded.get())
-            s.add ("android.permission.BLUETOOTH_ADVERTISE");
-
-        if (androidBluetoothConnectNeeded.get())
-            s.add ("android.permission.BLUETOOTH_CONNECT");
-
-        if (   androidBluetoothScanNeeded.get()
-            || androidBluetoothAdvertiseNeeded.get()
-            || androidBluetoothConnectNeeded.get())
+        if (androidBluetoothNeeded.get())
         {
             s.add ("android.permission.BLUETOOTH");
             s.add ("android.permission.BLUETOOTH_ADMIN");
             s.add ("android.permission.ACCESS_FINE_LOCATION");
-            s.add ("android.permission.ACCESS_COARSE_LOCATION");
         }
 
-        if (androidReadMediaAudioPermission.get())
-            s.add ("android.permission.READ_MEDIA_AUDIO");
-
-        if (androidReadMediaImagesPermission.get())
-            s.add ("android.permission.READ_MEDIA_IMAGES");
-
-        if (androidReadMediaVideoPermission.get())
-            s.add ("android.permission.READ_MEDIA_VIDEO");
-
-        if (   androidReadMediaAudioPermission.get()
-            || androidReadMediaImagesPermission.get()
-            || androidReadMediaVideoPermission.get())
-        {
+        if (androidExternalReadPermission.get())
             s.add ("android.permission.READ_EXTERNAL_STORAGE");
-        }
 
         if (androidExternalWritePermission.get())
             s.add ("android.permission.WRITE_EXTERNAL_STORAGE");
@@ -1989,9 +1865,6 @@ private:
 
         if (androidVibratePermission.get())
             s.add ("android.permission.VIBRATE");
-
-        if (arePushNotificationsEnabled())
-            s.add ("android.permission.POST_NOTIFICATIONS");
 
         return getCleanedStringArray (s);
     }
@@ -2011,6 +1884,11 @@ private:
             escapedArray.add ("\"" + element.replace ("\\", "\\\\").replace ("\"", "\\\"") + "\"");
 
         return escapedArray.joinIntoString (", ");
+    }
+
+    bool supportsGLv3() const
+    {
+        return (static_cast<int> (androidMinimumSDK.get()) >= 18);
     }
 
     //==============================================================================

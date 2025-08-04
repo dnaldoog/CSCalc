@@ -1,33 +1,21 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   The code included in this file is provided under the terms of the ISC license
+   http://www.isc.org/downloads/software-support-policy/isc-license. Permission
+   To use, copy, modify, and/or distribute this software for any purpose with or
+   without fee is hereby granted provided that the above copyright notice and
+   this permission notice appear in all copies.
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
-
-   Or:
-
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -53,13 +41,8 @@ using MessageCallbackFunction = void* (void* userData);
 
     @tags{Events}
 */
-class JUCE_API  MessageManager  final
+class JUCE_API  MessageManager  
 {
-    template <typename FunctionResult>
-    using CallSyncResult = std::conditional_t<std::is_same_v<FunctionResult, void>,
-                                              bool,
-                                              std::optional<FunctionResult>>;
-
 public:
     //==============================================================================
     /** Returns the global instance of the MessageManager. */
@@ -96,7 +79,7 @@ public:
     */
     bool hasStopMessageBeenSent() const noexcept        { return quitMessagePosted.get() != 0; }
 
-   #if JUCE_MODAL_LOOPS_PERMITTED
+   #if JUCE_MODAL_LOOPS_PERMITTED || DOXYGEN
     /** Synchronously dispatches messages until a given time has elapsed.
 
         Returns false if a quit message has been posted by a call to stopDispatchLoop(),
@@ -108,24 +91,10 @@ public:
     //==============================================================================
     /** Asynchronously invokes a function or C++11 lambda on the message thread.
 
-        @param function  the function to call, which should have no arguments
-        @returns         true if the message was successfully posted to the message queue,
-                         or false otherwise.
+        @returns  true if the message was successfully posted to the message queue,
+                  or false otherwise.
     */
-    template <typename Function>
-    static bool callAsync (Function&& function)
-    {
-        using NonRef = std::remove_cv_t<std::remove_reference_t<Function>>;
-
-        struct AsyncCallInvoker final : public MessageBase
-        {
-            explicit AsyncCallInvoker (NonRef f) : fn (std::move (f)) {}
-            void messageCallback() override { fn(); }
-            NonRef fn;
-        };
-
-        return (new AsyncCallInvoker { std::move (function) })->post();
-    }
+    static bool callAsync (std::function<void()> functionToCall);
 
     /** Calls a function using the message-thread.
 
@@ -146,47 +115,6 @@ public:
         @see MessageManagerLock
     */
     void* callFunctionOnMessageThread (MessageCallbackFunction* callback, void* userData);
-
-    /** Similar to callFunctionOnMessageThread(), calls a function on the message thread,
-        blocking the current thread until a result is available.
-
-        Be careful not to cause any deadlocks with this! It's easy to do - e.g. if the caller
-        thread has a critical section locked, which an unrelated message callback then tries to lock
-        before the message thread gets round to processing this callback.
-
-        @param function     the function to call, which should have no parameters
-        @returns            if function() returns void, then callSync returns a boolean where
-                            'true' indicates that the function was called successfully, and 'false'
-                            indicates that the message could not be posted.
-                            if function() returns any other type 'T', then callSync returns
-                            std::optional<T>, where the optional value will be valid if the function
-                            was called successfully, or nullopt otherwise.
-    */
-    template <typename Function>
-    static auto callSync (Function&& function) -> CallSyncResult<decltype (function())>
-    {
-        using FinalResult = CallSyncResult<decltype (function())>;
-
-        if (MessageManager::getInstance()->isThisTheMessageThread())
-            return transformResult (std::forward<Function> (function));
-
-        std::promise<FinalResult> promise;
-        auto future = promise.get_future();
-
-        const auto sent = callAsync ([p = std::move (promise), fn = std::move (function)]() mutable
-        {
-            p.set_value (transformResult (std::move (fn)));
-        });
-
-        if (! sent)
-        {
-            // Failed to post message!
-            jassertfalse;
-            return {};
-        }
-
-        return future.get();
-    }
 
     /** Returns true if the caller-thread is the message thread. */
     bool isThisTheMessageThread() const noexcept;
@@ -275,7 +203,7 @@ public:
             Creates a new critical section to exclusively access methods which can
             only be called when the message manager is locked.
 
-            Unlike CriticalSection, multiple instances of this lock class provide
+            Unlike CrititcalSection, multiple instances of this lock class provide
             exclusive access to a single resource - the MessageManager.
         */
         Lock();
@@ -369,23 +297,13 @@ public:
         struct BlockingMessage;
         friend class ReferenceCountedObjectPtr<BlockingMessage>;
 
-        bool exclusiveTryAcquire (bool) const noexcept;
         bool tryAcquire (bool) const noexcept;
-
-        void setAcquired (bool success) const noexcept;
+        void messageCallback() const;
 
         //==============================================================================
-        // This mutex is used to make this lock type behave like a normal mutex.
-        // If multiple threads call enter() simultaneously, only one will succeed in gaining
-        // this mutex. The mutex is released again in exit().
-        mutable CriticalSection entryMutex;
-
-        // This mutex protects the other data members of the lock from concurrent access, which
-        // happens when the BlockingMessage calls setAcquired to indicate that the lock was gained.
-        mutable std::mutex mutex;
         mutable ReferenceCountedObjectPtr<BlockingMessage> blockingMessage;
-        mutable std::condition_variable condvar;
-        mutable bool abortWait = false, acquired = false;
+        WaitableEvent lockedEvent;
+        mutable Atomic<int> abortWait, lockGained;
     };
 
     //==============================================================================
@@ -410,26 +328,12 @@ private:
     Atomic<int> quitMessagePosted { 0 }, quitMessageReceived { 0 };
     Thread::ThreadID messageThreadId;
     Atomic<Thread::ThreadID> threadWithLock;
-    mutable std::mutex messageThreadIdMutex;
-
-    template <typename Function>
-    static auto transformResult (Function&& f)
-    {
-        if constexpr (std::is_same_v<decltype (f()), void>)
-        {
-            f();
-            return true;
-        }
-        else
-        {
-            return f();
-        }
-    }
 
     static bool postMessageToSystemQueue (MessageBase*);
     static void* exitModalLoopCallback (void*);
     static void doPlatformSpecificInitialisation();
     static void doPlatformSpecificShutdown();
+    static bool dispatchNextMessageOnSystemQueue (bool returnIfNoPendingMessages);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MessageManager)
 };

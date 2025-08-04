@@ -1,33 +1,24 @@
 /*
   ==============================================================================
 
-   This file is part of the JUCE framework.
-   Copyright (c) Raw Material Software Limited
+   This file is part of the JUCE library.
+   Copyright (c) 2020 - Raw Material Software Limited
 
-   JUCE is an open source framework subject to commercial or open source
+   JUCE is an open source library subject to commercial or open-source
    licensing.
 
-   By downloading, installing, or using the JUCE framework, or combining the
-   JUCE framework with any other source code, object code, content or any other
-   copyrightable work, you agree to the terms of the JUCE End User Licence
-   Agreement, and all incorporated terms including the JUCE Privacy Policy and
-   the JUCE Website Terms of Service, as applicable, which will bind you. If you
-   do not agree to the terms of these agreements, we will not license the JUCE
-   framework to you, and you must discontinue the installation or download
-   process and cease use of the JUCE framework.
+   By using JUCE, you agree to the terms of both the JUCE 6 End-User License
+   Agreement and JUCE Privacy Policy (both effective as of the 16th June 2020).
 
-   JUCE End User Licence Agreement: https://juce.com/legal/juce-8-licence/
-   JUCE Privacy Policy: https://juce.com/juce-privacy-policy
-   JUCE Website Terms of Service: https://juce.com/juce-website-terms-of-service/
+   End User License Agreement: www.juce.com/juce-6-licence
+   Privacy Policy: www.juce.com/juce-privacy-policy
 
-   Or:
+   Or: You may also use this code under the terms of the GPL v3 (see
+   www.gnu.org/licenses).
 
-   You may also use this code under the terms of the AGPLv3:
-   https://www.gnu.org/licenses/agpl-3.0.en.html
-
-   THE JUCE FRAMEWORK IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL
-   WARRANTIES, WHETHER EXPRESSED OR IMPLIED, INCLUDING WARRANTY OF
-   MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, ARE DISCLAIMED.
+   JUCE IS PROVIDED "AS IS" WITHOUT ANY WARRANTY, AND ALL WARRANTIES, WHETHER
+   EXPRESSED OR IMPLIED, INCLUDING MERCHANTABILITY AND FITNESS FOR PURPOSE, ARE
+   DISCLAIMED.
 
   ==============================================================================
 */
@@ -74,58 +65,10 @@ public:
     */
     PluginDescription getPluginDescription() const;
 
-    /** Allows retrieval of information related to the inner workings of a particular plugin format,
-        such as the AEffect* of a VST, or the handle of an AudioUnit.
-
-        To use this, create a new class derived from ExtensionsVisitor, and override
-        each of the visit member functions. If this AudioPluginInstance wraps a VST3 plugin
-        the visitVST3() member will be called, while if the AudioPluginInstance wraps an
-        unknown format the visitUnknown() member will be called. The argument of the visit function
-        can be queried to extract information related to the AudioPluginInstance's implementation.
-    */
-    virtual void getExtensions (ExtensionsVisitor&) const;
-
-    using HostedParameter = HostedAudioProcessorParameter;
-
-    /** Adds a parameter to this instance.
-
-        @see AudioProcessor::addParameter()
-    */
-    void addHostedParameter (std::unique_ptr<HostedParameter>);
-
-    /** Adds multiple parameters to this instance.
-
-        In debug mode, this will also check that all added parameters derive from
-        HostedParameter.
-
-        @see AudioProcessor::addParameterGroup()
-    */
-    void addHostedParameterGroup (std::unique_ptr<AudioProcessorParameterGroup>);
-
-    /** Adds multiple parameters to this instance.
-
-        In debug mode, this will also check that all added parameters derive from
-        HostedParameter.
-
-        @see AudioProcessor::setParameterTree()
-    */
-    void setHostedParameterTree (AudioProcessorParameterGroup);
-
-    /** Gets the parameter at a particular index.
-
-        If you want to find lots of parameters by their IDs, you should probably build and
-        use a map<String, HostedParameter*> by looping through all parameters.
-    */
-    HostedParameter* getHostedParameter (int index) const;
-
-   #ifndef DOXYGEN
-    /** Use the new typesafe visitor-based interface rather than this function.
-
-        Returns a pointer to some kind of platform-specific data about the plugin.
+    /** Returns a pointer to some kind of platform-specific data about the plugin.
         E.g. For a VST, this value can be cast to an AEffect*. For an AudioUnit, it can be
         cast to an AudioUnit handle.
     */
-    [[deprecated ("Use the new typesafe visitor-based interface rather than this function.")]]
     virtual void* getPlatformSpecificData();
 
     // Rather than using these methods you should call the corresponding methods
@@ -135,36 +78,34 @@ public:
     //
     // In addition to being marked as deprecated these methods will assert on
     // the first call.
-    [[deprecated]] String getParameterID (int index) override;
-    [[deprecated]] float getParameter (int parameterIndex) override;
-    [[deprecated]] void setParameter (int parameterIndex, float newValue) override;
-    [[deprecated]] const String getParameterName (int parameterIndex) override;
-    [[deprecated]] String getParameterName (int parameterIndex, int maximumStringLength) override;
-    [[deprecated]] const String getParameterText (int parameterIndex) override;
-    [[deprecated]] String getParameterText (int parameterIndex, int maximumStringLength) override;
-    [[deprecated]] int getParameterNumSteps (int parameterIndex) override;
-    [[deprecated]] bool isParameterDiscrete (int parameterIndex) const override;
-    [[deprecated]] bool isParameterAutomatable (int parameterIndex) const override;
-    [[deprecated]] float getParameterDefaultValue (int parameterIndex) override;
-    [[deprecated]] String getParameterLabel (int parameterIndex) const override;
-    [[deprecated]] bool isParameterOrientationInverted (int parameterIndex) const override;
-    [[deprecated]] bool isMetaParameter (int parameterIndex) const override;
-    [[deprecated]] AudioProcessorParameter::Category getParameterCategory (int parameterIndex) const override;
-   #endif
+    JUCE_DEPRECATED (String getParameterID (int index) override);
+    JUCE_DEPRECATED (float getParameter (int parameterIndex) override);
+    JUCE_DEPRECATED (void setParameter (int parameterIndex, float newValue) override);
+    JUCE_DEPRECATED (const String getParameterName (int parameterIndex) override);
+    JUCE_DEPRECATED (String getParameterName (int parameterIndex, int maximumStringLength) override);
+    JUCE_DEPRECATED (const String getParameterText (int parameterIndex) override);
+    JUCE_DEPRECATED (String getParameterText (int parameterIndex, int maximumStringLength) override);
+    JUCE_DEPRECATED (int getParameterNumSteps (int parameterIndex) override);
+    JUCE_DEPRECATED (bool isParameterDiscrete (int parameterIndex) const override);
+    JUCE_DEPRECATED (bool isParameterAutomatable (int parameterIndex) const override);
+    JUCE_DEPRECATED (float getParameterDefaultValue (int parameterIndex) override);
+    JUCE_DEPRECATED (String getParameterLabel (int parameterIndex) const override);
+    JUCE_DEPRECATED (bool isParameterOrientationInverted (int parameterIndex) const override);
+    JUCE_DEPRECATED (bool isMetaParameter (int parameterIndex) const override);
+    JUCE_DEPRECATED (AudioProcessorParameter::Category getParameterCategory (int parameterIndex) const override);
 
 protected:
     //==============================================================================
     /** Structure used to describe plugin parameters */
-    struct Parameter   : public HostedParameter
+    struct Parameter   : public AudioProcessorParameter
     {
-    public:
         Parameter();
+        ~Parameter() override;
 
         String getText (float value, int maximumStringLength) const override;
         float getValueForText (const String& text) const override;
 
-    private:
-        const StringArray onStrings, offStrings;
+        StringArray onStrings, offStrings;
     };
 
     AudioPluginInstance() = default;
@@ -173,12 +114,6 @@ protected:
     AudioPluginInstance (const short channelLayoutList[numLayouts][2]) : AudioProcessor (channelLayoutList) {}
 
 private:
-    // It's not safe to add a plain AudioProcessorParameter to an AudioPluginInstance.
-    // Instead, all parameters must be HostedParameters.
-    using AudioProcessor::addParameter;
-    using AudioProcessor::addParameterGroup;
-    using AudioProcessor::setParameterTree;
-
     void assertOnceOnDeprecatedMethodUse() const noexcept;
 
     static bool deprecationAssertiontriggered;

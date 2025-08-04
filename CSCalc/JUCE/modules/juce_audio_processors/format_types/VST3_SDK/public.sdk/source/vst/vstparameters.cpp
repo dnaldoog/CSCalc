@@ -8,7 +8,7 @@
 //
 //-----------------------------------------------------------------------------
 // LICENSE
-// (c) 2024, Steinberg Media Technologies GmbH, All Rights Reserved
+// (c) 2019, Steinberg Media Technologies GmbH, All Rights Reserved
 //-----------------------------------------------------------------------------
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,13 +45,14 @@ namespace Vst {
 //------------------------------------------------------------------------
 // Parameter Implementation
 //------------------------------------------------------------------------
-Parameter::Parameter ()
+Parameter::Parameter () : valueNormalized (0.), precision (4)
 {
+	info = { 0 };
 }
 
 //------------------------------------------------------------------------
 Parameter::Parameter (const ParameterInfo& info)
-: info (info), valueNormalized (info.defaultNormalizedValue)
+: info (info), valueNormalized (info.defaultNormalizedValue), precision (4)
 {
 }
 
@@ -59,7 +60,10 @@ Parameter::Parameter (const ParameterInfo& info)
 Parameter::Parameter (const TChar* title, ParamID tag, const TChar* units,
                       ParamValue defaultValueNormalized, int32 stepCount, int32 flags,
                       UnitID unitID, const TChar* shortTitle)
+: precision (4)
 {
+	info = { 0 };
+
 	UString (info.title, str16BufferSize (String128)).assign (title);
 	if (units)
 		UString (info.units, str16BufferSize (String128)).assign (units);
@@ -219,7 +223,8 @@ bool RangeParameter::fromString (const TChar* string, ParamValue& _valueNormaliz
 ParamValue RangeParameter::toPlain (ParamValue _valueNormalized) const
 {
 	if (info.stepCount > 1)
-		return FromNormalized<ParamValue> (_valueNormalized, info.stepCount) + getMin ();
+		return Min<int32> (info.stepCount, (int32) (_valueNormalized * (info.stepCount + 1))) +
+		       getMin ();
 	return _valueNormalized * (getMax () - getMin ()) + getMin ();
 }
 
@@ -227,9 +232,7 @@ ParamValue RangeParameter::toPlain (ParamValue _valueNormalized) const
 ParamValue RangeParameter::toNormalized (ParamValue plainValue) const
 {
 	if (info.stepCount > 1)
-		return ToNormalized <ParamValue>(plainValue - getMin (), info.stepCount);
-
-	SMTG_ASSERT (getMax () - getMin () != 0);
+		return (plainValue - getMin ()) / info.stepCount;
 	return (plainValue - getMin ()) / (getMax () - getMin ());
 }
 
@@ -300,8 +303,9 @@ bool StringListParameter::replaceString (int32 index, const String128 string)
 //------------------------------------------------------------------------
 void StringListParameter::toString (ParamValue _valueNormalized, String128 string) const
 {
-	int32 index = static_cast<int32> (toPlain (_valueNormalized));
-	if (const TChar* valueString = strings.at (index))
+	int32 index = (int32)toPlain (_valueNormalized);
+	const TChar* valueString = strings.at (index);
+	if (valueString)
 	{
 		UString (string, str16BufferSize (String128)).assign (valueString);
 	}
@@ -329,7 +333,7 @@ ParamValue StringListParameter::toPlain (ParamValue _valueNormalized) const
 {
 	if (info.stepCount <= 0)
 		return 0;
-	return FromNormalized<ParamValue> (_valueNormalized, info.stepCount);
+	return Min<int32> (info.stepCount, (int32) (_valueNormalized * (info.stepCount + 1)));
 }
 
 //------------------------------------------------------------------------
@@ -337,13 +341,13 @@ ParamValue StringListParameter::toNormalized (ParamValue plainValue) const
 {
 	if (info.stepCount <= 0)
 		return 0;
-	return ToNormalized<ParamValue> (plainValue, info.stepCount);
+	return plainValue / (ParamValue)info.stepCount;
 }
 
 //------------------------------------------------------------------------
 // ParameterContainer Implementation
 //------------------------------------------------------------------------
-ParameterContainer::ParameterContainer ()
+ParameterContainer::ParameterContainer () : params (nullptr)
 {
 }
 
@@ -388,38 +392,15 @@ Parameter* ParameterContainer::addParameter (const ParameterInfo& info)
 }
 
 //------------------------------------------------------------------------
-Parameter* ParameterContainer::getParameterByIndex (int32 index) const
-{
-	if (!params || index < 0 || index >= static_cast<int32> (params->size ()))
-		return nullptr;
-	return params->at (index);
-}
-
-//------------------------------------------------------------------------
-Parameter* ParameterContainer::getParameter (ParamID tag) const
+Parameter* ParameterContainer::getParameter (ParamID tag)
 {
 	if (params)
 	{
-		auto it = id2index.find (tag);
+		IndexMap::const_iterator it = id2index.find (tag);
 		if (it != id2index.end ())
 			return params->at (it->second);
 	}
 	return nullptr;
-}
-
-//------------------------------------------------------------------------
-bool ParameterContainer::removeParameter (ParamID tag)
-{
-	if (!params)
-		return false;
-	
-	IndexMap::const_iterator it = id2index.find (tag);
-	if (it != id2index.end ())
-	{
-		params->erase (params->begin () + it->second);
-		id2index.erase (it);
-	}
-	return false;
 }
 
 //------------------------------------------------------------------------
@@ -432,7 +413,7 @@ Parameter* ParameterContainer::addParameter (const TChar* title, const TChar* un
 		return nullptr;
 	}
 
-	ParameterInfo info = {};
+	ParameterInfo info = {0};
 
 	UString (info.title, str16BufferSize (String128)).assign (title);
 	if (units)
