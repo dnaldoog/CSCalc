@@ -1,4 +1,27 @@
-<img width="377" height="401" alt="{C0F57360-938B-44B1-A665-F293FBD296C3}" src="https://github.com/user-attachments/assets/e0a1e1b5-b89d-48f1-8683-bb08f6e8ceac" />
+### Sysex Checksum Calculator
+
+#### Calculate checksums for 
+
+- ### Additive type checksums.
+    - This includes Roland/Yamaha
+- ### XOR checksums
+    - Many manufacturers also use this system.
+
+----
+Paste in a sysex string and enter the start byte for the data
+The end byte can either be determined using the subsequent bytes from start
+or determined by counting back from the end.
+
+***Example***. To calculate the Roland checksum for the sysex string:
+
+````f0 41 10 57 12 03 00 01 10 31 00 f7````
+
+The checksum (0x3B) can be calculated by entering in:
+
+- Start Byte Index=5 : End Offset =2 `03 00 01 10 31`
+- Start Byte Index=5 : Length =5 `03 00 01 10 31`
 
 
-<img width="381" height="402" alt="{37DC321C-3411-4608-BABD-27A60CBE70B9}" src="https://github.com/user-attachments/assets/694cfc2e-6714-43e0-9466-bb218625d829" />
+### CHANGELOG
+
+- Version v1.0.0 first release 08/04/2025
