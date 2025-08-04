@@ -80,7 +80,9 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
             sum += bytes[i];
         }
         // Roland-style checksum: take lower 7 bits and compute 2's complement
-        result.checksum = (128 - (sum % 128)) % 128;
+		sum = ~sum & 0x7f; // Keep only lower 7 bits
+        result.checksum = ++sum;
+        //result.checksum = (128 - (sum % 128)) % 128;
     }
     else if (checksumType == ChecksumType::XOR)
     {

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="NydGnL" name="CSCalc" projectType="guiapp" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1"
+              cppLanguageStandard="14">
   <MAINGROUP id="jsr4Bo" name="CSCalc">
     <GROUP id="{BF60EF84-2165-7713-9569-8A6C0D7AC9B0}" name="Source">
       <FILE id="OXQoP0" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
