@@ -10,11 +10,11 @@
 #include "MainComponent.h"
 
 //==============================================================================
-class SysexChecksumCalculatorApplication  : public juce::JUCEApplication
+class CSCalcApplication  : public juce::JUCEApplication
 {
 public:
     //==============================================================================
-    SysexChecksumCalculatorApplication() {}
+    CSCalcApplication() {}
 
     const juce::String getApplicationName() override       { return ProjectInfo::projectName; }
     const juce::String getApplicationVersion() override    { return ProjectInfo::versionString; }
@@ -102,4 +102,4 @@ private:
 
 //==============================================================================
 // This macro generates the main() routine that launches the app.
-START_JUCE_APPLICATION (SysexChecksumCalculatorApplication)
+START_JUCE_APPLICATION (CSCalcApplication)
