@@ -27,4 +27,8 @@ The checksum (0x3B) can be calculated by entering in:
 
 ### CHANGELOG
 
-- Version v1.0.0 first release 08/04/2025
+- Version v1.0.0 -  08/04/2025
+    - first release
+- Version v2.0.0 -  08/05/2025
+    - Ctrl+click to copy sysex message only to buffer
+    - Print out result now prints checksum
