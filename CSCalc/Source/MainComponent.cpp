@@ -8,7 +8,7 @@ MainComponent::MainComponent()
     options.filenameSuffix = ".settings";
     options.osxLibrarySubFolder = "Preferences";
     settingsFile.reset(new juce::PropertiesFile(options));
-
+    tooltipWindow.reset(new juce::TooltipWindow(this, 700));
     loadSettings();
 
     // Setup the button
@@ -19,7 +19,8 @@ MainComponent::MainComponent()
     // Setup copy button
     copyResultButton.setButtonText("Copy Result");
     copyResultButton.addListener(this);
-    copyResultButton.setEnabled(false); // Initially disabled
+    copyResultButton.setEnabled(false);
+    copyResultButton.setTooltip("Click to copy full result\nCtrl+Click to copy SysEx only");
     addAndMakeVisible(copyResultButton);
 
     // Setup clear button
@@ -79,7 +80,51 @@ void MainComponent::saveSettings()
         settingsFile->saveIfNeeded();
     }
 }
+// Method to insert checksum at the correct position (before EOX/F7)
+juce::String MainComponent::insertChecksumAtCorrectPosition(const juce::String& processedString, uint8_t checksum)
+{
+    juce::StringArray tokens;
+    tokens.addTokens(processedString, " ", "");
 
+    if (tokens.size() < 2)
+        return processedString; // Not enough tokens to have a checksum position
+
+    // Find the last F7 (EOX) byte
+    int eoxPosition = -1;
+    for (int i = tokens.size() - 1; i >= 0; --i)
+    {
+        if (tokens[i].toLowerCase() == "f7")
+        {
+            eoxPosition = i;
+            break;
+        }
+    }
+
+    // If we found F7, the checksum goes in the position before it
+    int checksumPosition = -1;
+    if (eoxPosition > 0)
+    {
+        checksumPosition = eoxPosition - 1;
+    }
+    // Build the result string
+    juce::String result;
+    for (int i = 0; i < tokens.size(); ++i)
+    {
+        if (i > 0) result += " ";
+
+        // If this is the checksum position, insert the calculated checksum
+        if (i == checksumPosition)
+        {
+            result += juce::String::toHexString((int)checksum).paddedLeft('0', 2).toLowerCase();
+        }
+        else
+        {
+            result += tokens[i];
+        }
+    }
+
+    return result;
+}
 juce::String MainComponent::preprocessSysExString(const juce::String& input)
 {
     juce::StringArray tokens;
@@ -126,7 +171,6 @@ juce::String MainComponent::preprocessSysExString(const juce::String& input)
 
     return processed;
 }
-
 void MainComponent::paint(juce::Graphics& g)
 {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
@@ -185,17 +229,34 @@ void MainComponent::buttonClicked(juce::Button* button)
     }
     else if (button == &copyResultButton)
     {
-        // Copy the result text to clipboard
-        juce::String textToCopy = resultDisplay.getText();
-        if (textToCopy.isNotEmpty())
-        {
-            juce::SystemClipboard::copyTextToClipboard(textToCopy);
+        // Check if Ctrl key is held down
+        bool ctrlPressed = juce::ModifierKeys::getCurrentModifiers().isCtrlDown();
 
-            // Provide visual feedback by temporarily changing button text
-            copyResultButton.setButtonText("Copied!");
+        if (ctrlPressed && correctedSysExString.isNotEmpty())
+        {
+            // Ctrl+Click: Copy only the corrected SysEx string
+            juce::SystemClipboard::copyTextToClipboard(correctedSysExString);
+
+            // Provide visual feedback
+            copyResultButton.setButtonText("SysEx Copied!");
             juce::Timer::callAfterDelay(1500, [this]() {
                 copyResultButton.setButtonText("Copy Result");
                 });
+        }
+        else
+        {
+            // Normal click: Copy the full result text
+            juce::String textToCopy = resultDisplay.getText();
+            if (textToCopy.isNotEmpty())
+            {
+                juce::SystemClipboard::copyTextToClipboard(textToCopy);
+
+                // Provide visual feedback
+                copyResultButton.setButtonText("Copied!");
+                juce::Timer::callAfterDelay(1500, [this]() {
+                    copyResultButton.setButtonText("Copy Result");
+                    });
+            }
         }
     }
     else if (button == &clearButton)
@@ -206,6 +267,7 @@ void MainComponent::buttonClicked(juce::Button* button)
         lastParam2 = 0;
         lastRangeType = 0;
         lastChecksumType = 0;
+        correctedSysExString = ""; // Clear the stored corrected string
 
         // Clear the UI displays
         resultDisplay.setText("");
@@ -221,6 +283,7 @@ void MainComponent::buttonClicked(juce::Button* button)
             });
     }
 }
+
 
 void MainComponent::showSysExInputDialog()
 {
@@ -283,17 +346,17 @@ void MainComponent::showSysExInputDialog()
         lastRangeType = rangeType;
         lastChecksumType = checksumType;
 
-        // Preprocess the SysEx string to handle tokens
+        // Preprocess the SysEx string to handle tokens (convert non-hex to 00)
         juce::String processedSysExString = preprocessSysExString(sysexString);
-
         int startByte = startStr.getIntValue();
         int param2 = param2Str.getIntValue();
-
         // Calculate checksum using the Calculator class with processed string
         Calculator::ChecksumType type = (checksumType == 0) ? Calculator::ChecksumType::Additive : Calculator::ChecksumType::XOR;
         Calculator::RangeType rangeMethod = (rangeType == 0) ? Calculator::RangeType::StartEnd : Calculator::RangeType::StartLength;
 
         auto calcResult = calculator.calculateChecksum(processedSysExString.toStdString(), startByte, param2, type, rangeMethod);
+        correctedSysExString = insertChecksumAtCorrectPosition(processedSysExString, calcResult.checksum);
+
 
         // Display result
         juce::String checksumTypeName = (checksumType == 0) ? "Additive (Roland/Yamaha)" : "XOR";
@@ -305,11 +368,6 @@ void MainComponent::showSysExInputDialog()
         juce::MemoryBlock hexData;
         hexData.loadFromHexString(processedSysExString);
 
-        DBG("Original SysEx string: " << sysexString);
-        DBG("Processed SysEx string: " << processedSysExString);
-        DBG("Original hex data size: " << hexData.getSize());
-        DBG("Start byte: " << startByte << ", Length/End Offset: " << param2);
-
         // Calculate the actual length based on range type
         int actualLength;
         if (rangeType == 0) // Start + End Offset
@@ -320,8 +378,6 @@ void MainComponent::showSysExInputDialog()
         {
             actualLength = param2;
         }
-
-        DBG("Calculated actual length: " << actualLength);
 
         // Direct memory copy approach
         juce::MemoryBlock xr;
@@ -336,12 +392,9 @@ void MainComponent::showSysExInputDialog()
             parsedString += juce::String::toHexString((int)static_cast<const uint8_t*>(xr.getData())[i]).paddedLeft('0', 2);
         }
 
-        DBG("Extracted data size: " << xr.getSize());
-        DBG("Parsed string: " << parsedString);
-
         juce::String resultText;
         resultText << "Original SysEx: " << sysexString << "\n";
-        resultText << "Processed SysEx: " << processedSysExString << "\n";
+        resultText << "Corrected SysEx: " << correctedSysExString << "\n";  // Always show corrected version with proper checksum
         resultText << "Parsed String: " << parsedString << "\n";
         resultText << "Range Method: " << rangeMethodName << "\n";
         resultText << "Start Byte: " << startByte << "\n";
@@ -355,8 +408,6 @@ void MainComponent::showSysExInputDialog()
         resultText << "Checksum: " << hexChecksum << " : [" << intChecksum << "]\n";
 
         resultDisplay.setText(resultText);
-
-        // Enable the copy button now that we have results
         copyResultButton.setEnabled(true);
     }
 }
