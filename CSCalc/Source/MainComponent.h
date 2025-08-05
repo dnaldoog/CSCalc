@@ -12,12 +12,17 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
     void buttonClicked(juce::Button* button) override;
-    juce::String MainComponent::preprocessSysExString(const juce::String& input);
+
 private:
     void showSysExInputDialog();
     void loadSettings();
     void saveSettings();
-
+    juce::String insertChecksumAtCorrectPosition(const juce::String& processedString, uint8_t checksum);
+    // Keep the original preprocessSysExString method
+    juce::String preprocessSysExString(const juce::String& input);
+    juce::String correctedSysExString; // Store the corrected string for copying
+    //std::unique_ptr<juce::TooltipWindow> tooltipWindow; // Enable tooltips
+    std::unique_ptr<juce::TooltipWindow> tooltipWindow; // Enable tooltips
     // UI Components
     juce::TextButton openDialogButton;
     juce::TextButton copyResultButton;
