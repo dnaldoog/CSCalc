@@ -17,7 +17,8 @@ public:
     {
         Additive,
         XOR,
-		OnesComplement  // One's complement checksum
+		OnesComplement,  // One's complement checksum
+        SimpleSumming
     };
 
     enum class RangeType

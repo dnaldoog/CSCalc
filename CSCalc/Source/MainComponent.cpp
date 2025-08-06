@@ -66,7 +66,11 @@ MainComponent::MainComponent()
     checksumValueLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(checksumValueLabel);
 
-    setSize(650, 550);
+    //setSize(650, 700);
+    // In constructor, try this order:
+    //setSize(650, 600);
+    //juce::setResizable(true, false); // Allow resize, no use of corner resizer
+    centreWithSize(650, 700); // Alternative that might work better
 }
 
 MainComponent::~MainComponent()
@@ -245,7 +249,7 @@ void MainComponent::resized()
     int resultStartX = (resultArea.getWidth() - resultDisplayWidth) / 2;
 
     resultLabel.setBounds(resultStartX, resultArea.getY(), resultDisplayWidth, 20);
-    resultDisplay.setBounds(resultStartX, resultArea.getY() + 25, resultDisplayWidth, resultArea.getHeight() - 25);
+    resultDisplay.setBounds(resultStartX, resultArea.getY() + 25, resultDisplayWidth, resultArea.getHeight() - 15);
 }
 
 void MainComponent::buttonClicked(juce::Button* button)
@@ -342,6 +346,7 @@ void MainComponent::showSettingsDialog()
     checksumOptions.add("Additive Checksum (Roland/Yamaha style)");
     checksumOptions.add("XOR Checksum");
     checksumOptions.add("1's Complement - E-mu,Korg etc");
+    checksumOptions.add("Simple Sum + mask");
     alertWindow->addComboBox("checksumType", checksumOptions, "Checksum Type:");
     alertWindow->getComboBoxComponent("checksumType")->setSelectedItemIndex(lastChecksumType);
 
@@ -394,8 +399,10 @@ void MainComponent::calculateChecksum()
         type = Calculator::ChecksumType::Additive;
     else if (lastChecksumType == 1)
         type = Calculator::ChecksumType::XOR;
-    else
+    else if (lastChecksumType == 2)
         type = Calculator::ChecksumType::OnesComplement;
+    else
+        type = Calculator::ChecksumType::SimpleSumming;
 
     Calculator::RangeType rangeMethod = (lastRangeType == 0) ?
         Calculator::RangeType::StartEnd : Calculator::RangeType::StartLength;
@@ -411,8 +418,10 @@ void MainComponent::calculateChecksum()
         checksumTypeName = "Additive (Roland/Yamaha)";
     else if (lastChecksumType == 1)
         checksumTypeName = "XOR";
-    else
+    else if (lastChecksumType == 2)
         checksumTypeName = "One's Complement";
+    else
+        checksumTypeName = "Simple Sum AND 0x7F";
 
     juce::String rangeMethodName = (lastRangeType == 0) ? "Start + End Offset" : "Start + Length";
     juce::String hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum).toUpperCase();
