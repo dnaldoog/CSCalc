@@ -140,9 +140,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Source\Main.cpp"/>
+    <ClCompile Include="..\..\Source\MidiManufacturer.cpp"/>
     <ClCompile Include="..\..\Source\MainComponent.cpp"/>
     <ClCompile Include="..\..\Source\Calculator.cpp"/>
-    <ClCompile Include="..\..\Source\MidiManfacturerDatabase.cpp"/>
     <ClCompile Include="..\..\JUCE\modules\juce_core\containers\juce_AbstractFifo.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
@@ -1255,8 +1255,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\MainComponent.h"/>
+    <ClInclude Include="..\..\Source\MidiManufacturer.h"/>
     <ClInclude Include="..\..\Source\Calculator.h"/>
-    <ClInclude Include="..\..\Source\MidiManufacturerDatabase.h"/>
     <ClInclude Include="..\..\JUCE\modules\juce_core\containers\juce_AbstractFifo.h"/>
     <ClInclude Include="..\..\JUCE\modules\juce_core\containers\juce_Array.h"/>
     <ClInclude Include="..\..\JUCE\modules\juce_core\containers\juce_ArrayAllocationBase.h"/>

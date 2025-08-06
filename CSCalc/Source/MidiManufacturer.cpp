@@ -1,10 +1,44 @@
-#include "MidiManufacturerDatabase.h"
+#include "MidiManufacturer.h"
 
-const MidiManufacturerDatabase::ManufacturerInfo MidiManufacturerDatabase::manufacturers[] = {
+const MidiManufacturer::ManufacturerInfo MidiManufacturer::manufacturers[] = {
     // Single byte manufacturer IDs (0x01-0x7F)
     {0x01, "Sequential Circuits"},
     {0x02, "Big Briar"},
     {0x03, "Octave / Plateau"},
+    {0x03, "Octave Plateau"},
+    {0x04, "Moog Music"},
+    {0x05, "Passport Designs"},
+    {0x06, "Lexicon Inc."},
+    {0x07, "Kurzweil Music Systems"},
+    {0x08, "Fender Musical Instruments"},
+    {0x09, "Gulbransen Co."},
+    {0x0A, "Delta Labs"},
+    {0x0B, "Sound Company"},
+    {0x0C, "General Electro"},
+    {0x0D, "Techmar Inc."},
+    {0x0E, "Matthews Research Corp."},
+    {0x10, "Oberheim Electronics"},
+    {0x11, "PAIA Electronics"},
+    {0x12, "Simmons Electronic Drums"},
+    {0x13, "DigiDesign Inc."},
+    {0x14, "Fairlight Instruments"},
+    {0x15, "JL Cooper Electronics"},
+    {0x16, "Lowery Organ Co."},
+    {0x17, "Lin Electronics"},
+    {0x18, "Emu Systems Inc."},
+    {0x1B, "Peavey Electronics Corp."},
+    {0x20, "Bon Tempi SpA"},
+    {0x21, "S.I.E.L. S.p.A."},
+    {0x23, "SyntheAxe Inc."},
+    {0x24, "Hohner Musikinstrumente GmbH & Co KG"},
+    {0x25, "Crumar Srl"},
+    {0x26, "Solton SpA"},
+    {0x27, "Jellinghaus Musikinstrumente GmbH & Co KG"},
+    {0x28, "CTS Corporation"},
+    {0x29, "PPG (Palm Products GmbH)"},
+    {0x2F, "Elka S.p.A."},
+    {0x36, "Cheetah Marketing Ltd."},
+    {0x3E, "Waldorf Music GmbH"},
     {0x04, "Moog"},
     {0x05, "Passport Designs"},
     {0x06, "Lexicon"},
@@ -309,7 +343,7 @@ const MidiManufacturerDatabase::ManufacturerInfo MidiManufacturerDatabase::manuf
 };
 
 
-juce::String MidiManufacturerDatabase::getManufacturerName(uint32_t id)
+juce::String MidiManufacturer::getManufacturerName(uint32_t id)
 {
     for (int i = 0; manufacturers[i].name != nullptr; ++i)
     {

@@ -7,16 +7,16 @@
     <GROUP id="{BF60EF84-2165-7713-9569-8A6C0D7AC9B0}" name="Source">
       <FILE id="OXQoP0" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="dFkRxl" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
+      <FILE id="PDiYh6" name="MidiManufacturer.cpp" compile="1" resource="0"
+            file="Source/MidiManufacturer.cpp"/>
+      <FILE id="wQkAgl" name="MidiManufacturer.h" compile="0" resource="0"
+            file="Source/MidiManufacturer.h"/>
       <FILE id="oqVYre" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
     </GROUP>
     <FILE id="reKrtw" name="Calculator.cpp" compile="1" resource="0" file="Source/Calculator.cpp"/>
     <FILE id="oWvcv8" name="Calculator.h" compile="0" resource="0" file="Source/Calculator.h"/>
     <FILE id="br5PTd" name="icon.png" compile="0" resource="1" file="../../../Pictures/icon.png"/>
-    <FILE id="o4m7UF" name="MidiManufacturerDatabase.h" compile="0" resource="0"
-          file="Source/MidiManufacturerDatabase.h"/>
-    <FILE id="fx21nx" name="MidiManfacturerDatabase.cpp" compile="1" resource="0"
-          file="Source/MidiManfacturerDatabase.cpp"/>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
   <EXPORTFORMATS>

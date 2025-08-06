@@ -1,7 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "MidiManufacturerDatabase.h"
+#include "MidiManufacturer.h"
 #include "Calculator.h"
 
 class MainComponent : public juce::Component, public juce::Button::Listener

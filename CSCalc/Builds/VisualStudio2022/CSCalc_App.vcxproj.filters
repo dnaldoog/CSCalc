@@ -205,13 +205,13 @@
     <ClCompile Include="..\..\Source\Main.cpp">
       <Filter>CSCalc\Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\MidiManufacturer.cpp">
+      <Filter>CSCalc\Source</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Source\MainComponent.cpp">
       <Filter>CSCalc\Source</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Source\Calculator.cpp">
-      <Filter>CSCalc</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Source\MidiManfacturerDatabase.cpp">
       <Filter>CSCalc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\JUCE\modules\juce_core\containers\juce_AbstractFifo.cpp">
@@ -1404,10 +1404,10 @@
     <ClInclude Include="..\..\Source\MainComponent.h">
       <Filter>CSCalc\Source</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\Calculator.h">
-      <Filter>CSCalc</Filter>
+    <ClInclude Include="..\..\Source\MidiManufacturer.h">
+      <Filter>CSCalc\Source</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Source\MidiManufacturerDatabase.h">
+    <ClInclude Include="..\..\Source\Calculator.h">
       <Filter>CSCalc</Filter>
     </ClInclude>
     <ClInclude Include="..\..\JUCE\modules\juce_core\containers\juce_AbstractFifo.h">
