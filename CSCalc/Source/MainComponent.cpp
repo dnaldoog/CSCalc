@@ -671,6 +671,7 @@ void MainComponent::showSysExInputDialog()
     juce::StringArray checksumOptions;
     checksumOptions.add("Additive Checksum (Roland/Yamaha style)");
     checksumOptions.add("XOR Checksum");
+    checksumOptions.add("1's Complement - E-mu,Korg etc");
     alertWindow->addComboBox("checksumType", checksumOptions, "Checksum Type:");
     alertWindow->getComboBoxComponent("checksumType")->setSelectedItemIndex(lastChecksumType);
 
@@ -700,7 +701,20 @@ void MainComponent::showSysExInputDialog()
         int startByte = startStr.getIntValue();
         int param2 = param2Str.getIntValue();
         // Calculate checksum using the Calculator class with processed string
-        Calculator::ChecksumType type = (checksumType == 0) ? Calculator::ChecksumType::Additive : Calculator::ChecksumType::XOR;
+        Calculator::ChecksumType type;
+
+        if (checksumType == 0)
+        {
+            type = Calculator::ChecksumType::Additive;
+        }
+        else if (checksumType == 1)
+        {
+            type = Calculator::ChecksumType::XOR;
+        }
+        else
+        {
+            type = Calculator::ChecksumType::OnesComplement;
+        }
         Calculator::RangeType rangeMethod = (rangeType == 0) ? Calculator::RangeType::StartEnd : Calculator::RangeType::StartLength;
 
         auto calcResult = calculator.calculateChecksum(processedSysExString.toStdString(), startByte, param2, type, rangeMethod);
@@ -708,7 +722,20 @@ void MainComponent::showSysExInputDialog()
 
 
         // Display result
-        juce::String checksumTypeName = (checksumType == 0) ? "Additive (Roland/Yamaha)" : "XOR";
+        juce::String checksumTypeName;
+
+        if (checksumType == 0)
+        {
+            checksumTypeName = "Additive (Roland/Yamaha)";
+        }
+        else if (checksumType == 1)
+        {
+            checksumTypeName = "XOR";
+        }
+        else
+        {
+            checksumTypeName = "One's Complement";
+        }
         juce::String rangeMethodName = (rangeType == 0) ? "Start + End Offset" : "Start + Length";
         juce::String hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum).toUpperCase();
         juce::String intChecksum = juce::String(calcResult.checksum);

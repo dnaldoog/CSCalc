@@ -94,6 +94,16 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         }
         result.checksum = xorResult;
     }
+else if (checksumType == ChecksumType::OnesComplement)
+    {
+        // 1's complement
+        int o = 0;
+        for (int i = startByte; i < startByte + numBytes; ++i)
+        {
+            o += bytes[i];
+        }
+        result.checksum = ~o & 0x7F;
+    }
 
     result.success = true;
     return result;
