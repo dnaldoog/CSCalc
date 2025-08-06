@@ -2,8 +2,10 @@
 
 #include <JuceHeader.h>
 #include "Calculator.h"
+#include "MidiManufacturer.h"
 
-class MainComponent : public juce::Component, public juce::Button::Listener
+class MainComponent : public juce::Component,
+    private juce::Button::Listener
 {
 public:
     MainComponent();
@@ -11,47 +13,49 @@ public:
 
     void paint(juce::Graphics&) override;
     void resized() override;
-    void buttonClicked(juce::Button* button) override;
 
 private:
-    struct ManufacturerInfo {
-        uint32_t id;
-        const char* name;
-    };
+    void buttonClicked(juce::Button* button) override;
+    void showSettingsDialog();
+    void calculateChecksum();
 
-    static const ManufacturerInfo manufacturers[];
-    /*juce::String getManufacturerName(uint32_t id);*/
-    uint32_t parseManufacturerId(const juce::String& sysexString);
-    juce::String MainComponent::getManufacturerName(uint32_t id);
-    void showSysExInputDialog();
+    // Helper methods
+    juce::String preprocessSysExString(const juce::String& input);
+    juce::String insertChecksumAtCorrectPosition(const juce::String& processedString, uint8_t checksum);
+
+    // Settings management
     void loadSettings();
     void saveSettings();
-    juce::String insertChecksumAtCorrectPosition(const juce::String& processedString, uint8_t checksum);
-    // Keep the original preprocessSysExString method
-    juce::String preprocessSysExString(const juce::String& input);
-    juce::String correctedSysExString; // Store the corrected string for copying
-    //std::unique_ptr<juce::TooltipWindow> tooltipWindow; // Enable tooltips
-    std::unique_ptr<juce::TooltipWindow> tooltipWindow; // Enable tooltips
+
     // UI Components
-    juce::TextButton openDialogButton;
+    juce::TextButton settingsButton;
+    juce::TextButton calculateButton;
     juce::TextButton copyResultButton;
     juce::TextButton clearButton;
+
+    juce::Label sysexInputLabel;
+    juce::TextEditor sysexInput;
+
     juce::Label resultLabel;
     juce::TextEditor resultDisplay;
+
     juce::Label checksumLabel;
     juce::Label checksumValueLabel;
-    // Calculator
+
+    // Calculator and settings
     Calculator calculator;
-
-    // Settings storage
     std::unique_ptr<juce::PropertiesFile> settingsFile;
+    std::unique_ptr<juce::TooltipWindow> tooltipWindow;
 
-    // Default values for dialog
+    // Stored settings
     juce::String lastSysExString;
-    int lastStartByte;
-    int lastParam2;
-    int lastRangeType;
-    int lastChecksumType;
+    int lastStartByte = 5;
+    int lastParam2 = 2;
+    int lastRangeType = 0;
+    int lastChecksumType = 0;
+
+    // Store the corrected SysEx string for copying
+    juce::String correctedSysExString;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
