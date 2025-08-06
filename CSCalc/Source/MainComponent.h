@@ -1,8 +1,8 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "Calculator.h"
 #include "MidiManufacturerDatabase.h"
+#include "Calculator.h"
 
 class MainComponent : public juce::Component, public juce::Button::Listener
 {
@@ -15,15 +15,15 @@ public:
     void buttonClicked(juce::Button* button) override;
 
 private:
-    struct ManufacturerInfo {
-        uint32_t id;
-        const char* name;
-    };
+    //struct ManufacturerInfo {
+    //    uint32_t id;
+    //    const char* name;
+    //};
 
-    static const ManufacturerInfo manufacturers[];
-    /*juce::String getManufacturerName(uint32_t id);*/
+    //static const ManufacturerInfo manufacturers[];
+    ///*juce::String getManufacturerName(uint32_t id);*/
     uint32_t parseManufacturerId(const juce::String& sysexString);
-    juce::String MainComponent::getManufacturerName(uint32_t id);
+    //juce::String MainComponent::getManufacturerName(uint32_t id);
     void showSysExInputDialog();
     void loadSettings();
     void saveSettings();

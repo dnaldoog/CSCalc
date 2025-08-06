@@ -1,6 +1,5 @@
 #include "MainComponent.h"
 
-// Add this to your MainComponent.cpp file (after the includes):
 
 
 MainComponent::~MainComponent()
@@ -416,7 +415,7 @@ void MainComponent::calculateChecksum()
     uint32_t id = parseManufacturerId(sysexString);
 
     juce::String resultText;
-    resultText << "Manufacturer: " << getManufacturerName(id) << "\n";
+    resultText << "Manufacturer: " << MidiManufacturerDatabase::getManufacturerName(id) << "\n";
     resultText << "Original SysEx: " << sysexString << "\n";
     resultText << "Corrected SysEx: " << correctedSysExString << "\n";
     resultText << "Range Method: " << rangeMethodName << "\n";
