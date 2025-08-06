@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include "Calculator.h"
+#include "MidiManufacturerDatabase.h"
 
 class MainComponent : public juce::Component, public juce::Button::Listener
 {
@@ -26,6 +27,8 @@ private:
     void showSysExInputDialog();
     void loadSettings();
     void saveSettings();
+    void showSettingsDialog();
+    void calculateChecksum();
     juce::String insertChecksumAtCorrectPosition(const juce::String& processedString, uint8_t checksum);
     // Keep the original preprocessSysExString method
     juce::String preprocessSysExString(const juce::String& input);
@@ -36,6 +39,12 @@ private:
     juce::TextButton openDialogButton;
     juce::TextButton copyResultButton;
     juce::TextButton clearButton;
+    /*************Version 3.0.0 *********************************/
+    juce::TextButton settingsButton;
+    juce::TextButton calculateButton;
+	juce::TextEditor sysexInput;
+	juce::Label sysexInputLabel;
+    /**********************************************/
     juce::Label resultLabel;
     juce::TextEditor resultDisplay;
     juce::Label checksumLabel;
