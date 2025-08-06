@@ -14,6 +14,15 @@ public:
     void buttonClicked(juce::Button* button) override;
 
 private:
+    struct ManufacturerInfo {
+        uint32_t id;
+        const char* name;
+    };
+
+    static const ManufacturerInfo manufacturers[];
+    /*juce::String getManufacturerName(uint32_t id);*/
+    uint32_t parseManufacturerId(const juce::String& sysexString);
+    juce::String MainComponent::getManufacturerName(uint32_t id);
     void showSysExInputDialog();
     void loadSettings();
     void saveSettings();
@@ -31,7 +40,6 @@ private:
     juce::TextEditor resultDisplay;
     juce::Label checksumLabel;
     juce::Label checksumValueLabel;
-
     // Calculator
     Calculator calculator;
 
