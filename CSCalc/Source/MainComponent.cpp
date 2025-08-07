@@ -349,6 +349,7 @@ void MainComponent::showSettingsDialog()
     checksumOptions.add("XOR Checksum");
     checksumOptions.add("1's Complement - E-mu,Korg etc");
     checksumOptions.add("Simple Sum + mask");
+    checksumOptions.add("SONY MSB");
     alertWindow->addComboBox("checksumType", checksumOptions, "Checksum Type:");
     alertWindow->getComboBoxComponent("checksumType")->setSelectedItemIndex(lastChecksumType);
 
@@ -403,11 +404,12 @@ void MainComponent::calculateChecksum()
         type = Calculator::ChecksumType::XOR;
     else if (lastChecksumType == 2)
         type = Calculator::ChecksumType::OnesComplement;
-    else
+    else if (lastChecksumType == 3)
         type = Calculator::ChecksumType::SimpleSumming;
-
+    else
+        type = Calculator::ChecksumType::Sony;
     Calculator::RangeType rangeMethod = (lastRangeType == 0) ?
-        Calculator::RangeType::StartEnd : Calculator::RangeType::StartLength;
+    Calculator::RangeType::StartEnd : Calculator::RangeType::StartLength;
 
     auto calcResult = calculator.calculateChecksum(processedSysExString.toStdString(),
         lastStartByte, lastParam2, type, rangeMethod);
@@ -422,8 +424,10 @@ void MainComponent::calculateChecksum()
         checksumTypeName = "XOR";
     else if (lastChecksumType == 2)
         checksumTypeName = "One's Complement";
-    else
+    else  if (lastChecksumType == 3)
         checksumTypeName = "Simple Sum AND 0x7F";
+    else
+        checksumTypeName = "SONY MSB";
 
     juce::String rangeMethodName = (lastRangeType == 0) ? "Start + End Offset" : "Start + Length";
     juce::String hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum).toUpperCase();
@@ -431,9 +435,9 @@ void MainComponent::calculateChecksum()
     checksumValueLabel.setText(hexChecksum, juce::dontSendNotification);
 
     juce::MemoryBlock hexData;
+    juce::MemoryBlock dataCalc;
     hexData.loadFromHexString(processedSysExString);
 
-    // Calculate the actual length based on range type
     int actualLength;
     if (lastRangeType == 0) // Start + End Offset
     {
@@ -443,6 +447,22 @@ void MainComponent::calculateChecksum()
     {
         actualLength = lastParam2;
     }
+    juce::String parsedDataHex;
+    if (hexData.getSize() > 0 && lastStartByte >= 0 && actualLength > 0 &&
+        (lastStartByte + actualLength) <= static_cast<int>(hexData.getSize()))
+    {
+        const uint8_t* data = static_cast<const uint8_t*>(hexData.getData());
+        for (int i = 0; i < actualLength; ++i)
+        {
+            if (i > 0) parsedDataHex += " ";
+            parsedDataHex += juce::String::toHexString(data[lastStartByte + i]).paddedLeft('0', 2).toUpperCase();
+        }
+    }
+    else
+    {
+        parsedDataHex = "(Invalid range or no data)";
+    }
+
 
     uint32_t id = MidiManufacturer::parseManufacturerId(sysexString);
 
@@ -450,6 +470,7 @@ void MainComponent::calculateChecksum()
     resultText << "Manufacturer: " << MidiManufacturer::getManufacturerName(id) << "\n";
     resultText << "Original SysEx: " << sysexString << "\n";
     resultText << "Corrected SysEx: " << correctedSysExString << "\n";
+    resultText << "Parsed Data: " << parsedDataHex << "\n";
     resultText << "Range Method: " << rangeMethodName << "\n";
     resultText << "Start Byte: " << lastStartByte << "\n";
     if (lastRangeType == 0)
