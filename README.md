@@ -1,12 +1,14 @@
-### Sysex Checksum Calculator
+## Sysex Checksum Calculator
 
-#### Calculate checksums for 
+### Calculate checksums for 
 
-- ### Additive type checksums.
+- #### Additive type checksums (2's Complement).
     - This includes Roland/Yamaha
-- ### XOR checksums
+- #### Additive type checksums (1's Complement).
+- #### Simple Summing (additive) AND 0x7f
+- #### SONY checksums MSB
+- #### XOR checksums
     - Many manufacturers also use this system.
-
 ----
 Paste in a sysex string and enter the start byte for the data
 The end byte can either be determined using the subsequent bytes from start
