@@ -10,7 +10,7 @@
 - #### XOR checksums
     - Many manufacturers also use this system.
 ----
-Paste in a sysex string and enter the start byte for the data
+Paste in a sysex string and enter the start byte for the data.<BR>
 The end byte can either be determined using the subsequent bytes from start
 or determined by counting back from the end.
 
