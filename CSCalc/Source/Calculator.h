@@ -18,7 +18,8 @@ public:
         Additive,
         XOR,
 		OnesComplement,  // One's complement checksum
-        SimpleSumming
+        SimpleSumming,
+        Sony
     };
 
     enum class RangeType
