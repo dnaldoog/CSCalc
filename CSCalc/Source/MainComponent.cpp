@@ -326,7 +326,7 @@ void MainComponent::showSettingsDialog()
 {
     juce::AlertWindow alert("Calculation Settings",
         "Set the checksum calculation parameters:",
-        juce::MessageBoxIcon::Information);
+        juce::AlertWindow::NoIcon);
 
     // Create custom component with initial values
     auto* sliderComponent = new CustomSliderComponent(lastStartByte, lastParam2, lastRangeType == 0);
