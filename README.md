@@ -21,18 +21,18 @@ The checksum (0x3B) can be calculated by entering in:
 - Start Byte Index=5 : End Offset =2 `03 00 01 10 31`
 - Start Byte Index=5 : Length =5 `03 00 01 10 31`
 
-<img width="836" height="788" alt="{D3550DE7-3E9F-4D46-96A9-C850F0888C3A}" src="https://github.com/user-attachments/assets/d60bcc22-eb78-4c64-a555-c08693b1ee7d" />
-
-
-
+<img width="947" height="760" alt="{AC91A0FA-FDE7-4A42-A94D-5FDC6D67201F}" src="https://github.com/user-attachments/assets/1ba99780-cf25-4a6a-9d5c-41ba5ebcb4a5" />
 
 ### CHANGELOG
 
+- Version v4.0 -  08/07/2025
+    - Using Slider() for star/end parameters
+    - Added SONY MSB checksum
 - Version v3.0.0 -  08/07/2025
     - Changed to lighter theme
     - Added 1's complement checksum
     - Added Simple summing checksum
-    - Moved sysex input windo to main window for easier editing.
+    - Moved sysex input window to main window for easier editing.
 - Version v2.0.0 -  08/05/2025
     - Ctrl+click to copy sysex message only to buffer
     - Print out result now prints checksum
