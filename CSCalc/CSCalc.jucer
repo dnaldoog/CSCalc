@@ -12,7 +12,10 @@
     </GROUP>
     <FILE id="reKrtw" name="Calculator.cpp" compile="1" resource="0" file="Source/Calculator.cpp"/>
     <FILE id="oWvcv8" name="Calculator.h" compile="0" resource="0" file="Source/Calculator.h"/>
-    <FILE id="br5PTd" name="icon.png" compile="0" resource="1" file="../../../Pictures/icon.png"/>
+    <FILE id="rFrm4F" name="CustomSliderComponent.cpp" compile="1" resource="0"
+          file="Source/CustomSliderComponent.cpp"/>
+    <FILE id="evCXcN" name="CustomSliderComponent.h" compile="0" resource="0"
+          file="Source/CustomSliderComponent.h"/>
     <FILE id="Tveebq" name="MidiManufacturer.cpp" compile="1" resource="0"
           file="Source/MidiManufacturer.cpp"/>
     <FILE id="bLmXqU" name="MidiManufacturer.h" compile="0" resource="0"
