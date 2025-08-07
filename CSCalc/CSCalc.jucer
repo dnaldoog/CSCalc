@@ -2,7 +2,7 @@
 
 <JUCERPROJECT id="NydGnL" name="CSCalc" projectType="guiapp" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1"
-              cppLanguageStandard="14">
+              cppLanguageStandard="14" splashScreenColour="Light">
   <MAINGROUP id="jsr4Bo" name="CSCalc">
     <GROUP id="{BF60EF84-2165-7713-9569-8A6C0D7AC9B0}" name="Source">
       <FILE id="OXQoP0" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
@@ -12,7 +12,11 @@
     </GROUP>
     <FILE id="reKrtw" name="Calculator.cpp" compile="1" resource="0" file="Source/Calculator.cpp"/>
     <FILE id="oWvcv8" name="Calculator.h" compile="0" resource="0" file="Source/Calculator.h"/>
-    <FILE id="br5PTd" name="icon.png" compile="0" resource="1" file="../../../Pictures/icon.png"/>
+    <FILE id="rFrm4F" name="CustomSliderComponent.cpp" compile="1" resource="0"
+          file="Source/CustomSliderComponent.cpp"/>
+    <FILE id="evCXcN" name="CustomSliderComponent.h" compile="0" resource="0"
+          file="Source/CustomSliderComponent.h"/>
+    <FILE id="sFloUR" name="icon.png" compile="0" resource="1" file="../../../Pictures/icon.png"/>
     <FILE id="Tveebq" name="MidiManufacturer.cpp" compile="1" resource="0"
           file="Source/MidiManufacturer.cpp"/>
     <FILE id="bLmXqU" name="MidiManufacturer.h" compile="0" resource="0"
@@ -20,7 +24,7 @@
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
   <EXPORTFORMATS>
-    <VS2022 targetFolder="Builds/VisualStudio2022" smallIcon="br5PTd" bigIcon="br5PTd">
+    <VS2022 targetFolder="Builds/VisualStudio2022" smallIcon="sFloUR" bigIcon="sFloUR">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug" targetName="CSCalc"/>
         <CONFIGURATION isDebug="0" name="Release" targetName="CSCalc"/>

@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include "Calculator.h"
 #include "MidiManufacturer.h"
+#include "CustomSliderComponent.h"
 
 class MainComponent : public juce::Component,
     private juce::Button::Listener

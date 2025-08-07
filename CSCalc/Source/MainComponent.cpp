@@ -324,52 +324,58 @@ void MainComponent::buttonClicked(juce::Button* button)
 
 void MainComponent::showSettingsDialog()
 {
-    auto alertWindow = std::make_unique<juce::AlertWindow>("Calculation Settings",
+    juce::AlertWindow alert("Calculation Settings",
         "Set the checksum calculation parameters:",
         juce::AlertWindow::NoIcon);
 
-    // Add radio buttons for range specification method
+    // Create custom component with initial values
+    auto* sliderComponent = new CustomSliderComponent(lastStartByte, lastParam2, lastRangeType == 0);
+    sliderComponent->setSize(300, 120);
+    alert.addCustomComponent(sliderComponent);
+
+    // Add combo box for range specification method
     juce::StringArray rangeOptions;
     rangeOptions.add("Start + End (count from end of message)");
     rangeOptions.add("Start + Length (specify number of bytes)");
+    alert.addComboBox("rangeType", rangeOptions, "Range Method:");
+    alert.getComboBoxComponent("rangeType")->setSelectedItemIndex(lastRangeType);
 
-    alertWindow->addComboBox("rangeType", rangeOptions, "Range Method:");
-    alertWindow->getComboBoxComponent("rangeType")->setSelectedItemIndex(lastRangeType);
-
-    // Add text editors for range parameters
-    alertWindow->addTextEditor("start", juce::String(lastStartByte), "Start Byte Index:");
-
-    // Set the param2 label based on range type
-    juce::String param2Label = (lastRangeType == 0) ? "End Offset:" : "Message Length:";
-    alertWindow->addTextEditor("param2", juce::String(lastParam2), param2Label);
-
-    // Add radio buttons for checksum type
+    // Add combo box for checksum type
     juce::StringArray checksumOptions;
     checksumOptions.add("Additive Checksum (Roland/Yamaha style)");
     checksumOptions.add("XOR Checksum");
     checksumOptions.add("1's Complement - E-mu,Korg etc");
     checksumOptions.add("Simple Sum + mask");
     checksumOptions.add("SONY MSB");
-    alertWindow->addComboBox("checksumType", checksumOptions, "Checksum Type:");
-    alertWindow->getComboBoxComponent("checksumType")->setSelectedItemIndex(lastChecksumType);
+    alert.addComboBox("checksumType", checksumOptions, "Checksum Type:");
+    alert.getComboBoxComponent("checksumType")->setSelectedItemIndex(lastChecksumType);
 
-    alertWindow->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
-    alertWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+    alert.addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    alert.addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
 
-    int result = alertWindow->runModalLoop();
+    int result = alert.runModalLoop();
 
     if (result == 1) // OK button pressed
     {
-        juce::String startStr = alertWindow->getTextEditorContents("start");
-        juce::String param2Str = alertWindow->getTextEditorContents("param2");
-        int rangeType = alertWindow->getComboBoxComponent("rangeType")->getSelectedItemIndex();
-        int checksumType = alertWindow->getComboBoxComponent("checksumType")->getSelectedItemIndex();
+        // Get values from the custom slider component
+        int newStartByte = sliderComponent->getStartByteValue();
+        int newParam2 = sliderComponent->getParam2Value();
+
+        // Get values from combo boxes
+        int rangeType = alert.getComboBoxComponent("rangeType")->getSelectedItemIndex();
+        int checksumType = alert.getComboBoxComponent("checksumType")->getSelectedItemIndex();
 
         // Save the settings
-        lastStartByte = startStr.getIntValue();
-        lastParam2 = param2Str.getIntValue();
+        lastStartByte = newStartByte;
+        lastParam2 = newParam2;
         lastRangeType = rangeType;
         lastChecksumType = checksumType;
+
+        // Update the slider component's param2 label if range type changed
+        if (rangeType != lastRangeType)
+        {
+            sliderComponent->setParam2Label(rangeType == 0 ? "End Offset:" : "Message Length:");
+        }
 
         // Provide visual feedback
         settingsButton.setButtonText("Saved!");
