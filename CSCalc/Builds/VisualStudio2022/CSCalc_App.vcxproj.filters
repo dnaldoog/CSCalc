@@ -211,6 +211,9 @@
     <ClCompile Include="..\..\Source\Calculator.cpp">
       <Filter>CSCalc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\MidiManufacturer.cpp">
+      <Filter>CSCalc</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\JUCE\modules\juce_core\containers\juce_AbstractFifo.cpp">
       <Filter>JUCE Modules\juce_core\containers</Filter>
     </ClCompile>
@@ -1402,6 +1405,9 @@
       <Filter>CSCalc\Source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\Calculator.h">
+      <Filter>CSCalc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\MidiManufacturer.h">
       <Filter>CSCalc</Filter>
     </ClInclude>
     <ClInclude Include="..\..\JUCE\modules\juce_core\containers\juce_AbstractFifo.h">
