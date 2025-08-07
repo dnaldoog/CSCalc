@@ -28,8 +28,14 @@ The checksum (0x3B) can be calculated by entering in:
 
 ### CHANGELOG
 
-- Version v1.0.0 -  08/04/2025
-    - first release
+- Version v3.0.0 -  08/07/2025
+    - Changed to lighter theme
+    - Added 1's complement checksum
+    - Added Simple summing checksum
+    - Moved sysex input windo to main window for easier editing.
 - Version v2.0.0 -  08/05/2025
     - Ctrl+click to copy sysex message only to buffer
     - Print out result now prints checksum
+- Version v1.0.0 -  08/04/2025
+    - first release
+
