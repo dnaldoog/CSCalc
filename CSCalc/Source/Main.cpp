@@ -58,12 +58,19 @@ public:
     class MainWindow    : public juce::DocumentWindow
     {
     public:
+
         MainWindow (juce::String name)
+            //: DocumentWindow(name,
+            //    juce::Colours::blueviolet,  // Or any color you want
+            //    DocumentWindow::allButtons)
             : DocumentWindow (name,
                               juce::Desktop::getInstance().getDefaultLookAndFeel()
                                                           .findColour (juce::ResizableWindow::backgroundColourId),
                               DocumentWindow::allButtons)
         {
+
+            //juce::Colours::lightgrey
+            //
             setUsingNativeTitleBar (true);
             setContentOwned (new MainComponent(), true);
 
@@ -71,7 +78,8 @@ public:
             setFullScreen (true);
            #else
             setResizable (true, true);
-            centreWithSize (getWidth(), getHeight());
+            //centreWithSize (getWidth(), getHeight());
+            centreWithSize (650,700);
            #endif
 
             setVisible (true);

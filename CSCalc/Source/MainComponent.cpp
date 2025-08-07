@@ -31,6 +31,7 @@ MainComponent::MainComponent()
     addAndMakeVisible(clearButton);
 
     // Setup SysEx input
+    sysexInputLabel.setColour(juce::Label::textColourId, juce::Colours::black);
     sysexInputLabel.setText("SysEx Data (hex bytes):", juce::dontSendNotification);
     sysexInputLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(sysexInputLabel);
@@ -44,6 +45,7 @@ MainComponent::MainComponent()
     addAndMakeVisible(sysexInput);
 
     // Setup result display
+	resultLabel.setColour(juce::Label::textColourId,juce::Colours::black);
     resultLabel.setText("Calculation Results:", juce::dontSendNotification);
     resultLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(resultLabel);
@@ -55,6 +57,8 @@ MainComponent::MainComponent()
     addAndMakeVisible(resultDisplay);
 
     // Setup checksum display
+
+    checksumLabel.setColour(juce::Label::textColourId, juce::Colours::black);
     checksumLabel.setText("Checksum (Hex):", juce::dontSendNotification);
     checksumLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(checksumLabel);
@@ -66,10 +70,7 @@ MainComponent::MainComponent()
     checksumValueLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(checksumValueLabel);
 
-    //setSize(650, 700);
-    // In constructor, try this order:
-    //setSize(650, 600);
-    //juce::setResizable(true, false); // Allow resize, no use of corner resizer
+    DBG("Actual window size: " + juce::String(getWidth()) + " x " + juce::String(getHeight()));
     centreWithSize(650, 700); // Alternative that might work better
 }
 
@@ -77,6 +78,7 @@ MainComponent::~MainComponent()
 {
     saveSettings();
 }
+
 
 void MainComponent::loadSettings()
 {
@@ -195,10 +197,10 @@ juce::String MainComponent::preprocessSysExString(const juce::String& input)
 
 void MainComponent::paint(juce::Graphics& g)
 {
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-
-    g.setColour(juce::Colours::white);
-    g.setFont(20.0f);
+    //g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+    g.fillAll(juce::Colours::lightgrey);  // Or lightgrey, aliceblue, etc.
+    g.setColour(juce::Colours::darkgrey);
+    g.setFont(26.0f);
     g.drawText("MIDI SysEx Checksum Calculator", getLocalBounds().removeFromTop(50),
         juce::Justification::centred, true);
 }
