@@ -21,7 +21,8 @@ The checksum (0x3B) can be calculated by entering in:
 - Start Byte Index=5 : End Offset =2 `03 00 01 10 31`
 - Start Byte Index=5 : Length =5 `03 00 01 10 31`
 
-<img width="850" height="581" alt="{DF1A098A-2671-4103-A242-AD4E779A355F}" src="https://github.com/user-attachments/assets/001b28a0-5107-4087-800d-88c7d7dc8d0d" />
+<img width="836" height="788" alt="{D3550DE7-3E9F-4D46-96A9-C850F0888C3A}" src="https://github.com/user-attachments/assets/d60bcc22-eb78-4c64-a555-c08693b1ee7d" />
+
 
 
 
