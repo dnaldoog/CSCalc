@@ -125,29 +125,32 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
     }
     else if (checksumType == ChecksumType::KawaiK5)
     {
-        // Kawai K5 checksum
+        // Kawai K5 checksum - 16-bit word algorithm
         int sum = 0;
-        int oddSum = 0;
-        int evenSum = 0;
-        for (int i = startByte; i < startByte + numBytes; ++i)
-        {
-            int relativePosition = i - startByte;
 
-            if (relativePosition % 2 == 0) // Even position (0-indexed relative to start)
+        // Process data as 16-bit words (little-endian)
+        for (int i = startByte; i < startByte + numBytes; i += 2)
+        {
+            if (i + 1 < startByte + numBytes) // Ensure we have a complete pair
             {
-                evenSum += bytes[i];
+                // Little-endian: high byte << 8 | low byte
+                int word = ((bytes[i + 1] & 0xFF) << 8) | (bytes[i] & 0xFF);
+                sum += word;
             }
-            else // Odd position (0-indexed relative to start)
+            else if (i < startByte + numBytes) // Handle odd number of bytes
             {
-                oddSum += bytes[i];
+                // If we have an odd byte at the end, treat it as low byte with high byte = 0
+                sum += (bytes[i] & 0xFF);
             }
         }
-        // Kawai magic number is 0x5A3C
-        const int kawaiMagicNumber = 0x5A3C;
-        // Calculate checksum: magic_number - odd_sum - even_sum
-        int checksum = (kawaiMagicNumber - oddSum - evenSum) & 0xFF;
-        // Write checksum to the designated position
-        result.checksum = checksum & 0x7f;
+
+        // Apply 16-bit mask and calculate checksum
+        sum = sum & 0xFFFF;
+        int checksum = (0x5A3C - sum) & 0xFFFF;
+
+        // Store as 7-bit value for MIDI compliance
+        result.checksum = checksum & 0x7F;
+    
     }
     else
     {
