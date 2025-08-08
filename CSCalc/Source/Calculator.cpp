@@ -80,9 +80,8 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
             sum += bytes[i];
         }
         // Roland-style checksum: take lower 7 bits and compute 2's complement
-		sum = ~sum & 0x7f; // Keep only lower 7 bits
-        result.checksum = ++sum;
-        //result.checksum = (128 - (sum % 128)) % 128;
+		sum = ( ~sum +1 ) & 0x7f; // Keep only lower 7 bits
+        result.checksum = sum;
     }
     else if (checksumType == ChecksumType::XOR)
     {
@@ -92,7 +91,7 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         {
             xorResult ^= bytes[i];
         }
-        result.checksum = xorResult;
+        result.checksum = xorResult & 0x7f;
     }
     else if (checksumType == ChecksumType::OnesComplement)
     {
@@ -102,7 +101,7 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         {
             o += bytes[i];
         }
-        result.checksum = ~o &0x7f;
+        result.checksum = ~o & 0x7f;
     }
     else if (checksumType == ChecksumType::SimpleSumming)
     {
@@ -112,7 +111,7 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         {
             sum += bytes[i];
         }
-        result.checksum = sum &0x7f;
+        result.checksum = sum & 0x7f;
     }
     else if (checksumType == ChecksumType::Sony)
     {
@@ -122,9 +121,42 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         {
             sum += bytes[i];
         }
-        result.checksum = sum & 0xFF00 >> 8;
+        result.checksum = (sum & 0xFF00 >> 8) & 0x7f;
     }
+    else if (checksumType == ChecksumType::KawaiK5)
+    {
+        // Kawai K5 checksum - 16-bit word algorithm
+        int sum = 0;
 
+        // Process data as 16-bit words (little-endian)
+        for (int i = startByte; i < startByte + numBytes; i += 2)
+        {
+            if (i + 1 < startByte + numBytes) // Ensure we have a complete pair
+            {
+                // Little-endian: high byte << 8 | low byte
+                int word = ((bytes[i + 1] & 0xFF) << 8) | (bytes[i] & 0xFF);
+                sum += word;
+            }
+            else if (i < startByte + numBytes) // Handle odd number of bytes
+            {
+                // If we have an odd byte at the end, treat it as low byte with high byte = 0
+                sum += (bytes[i] & 0xFF);
+            }
+        }
+
+        // Apply 16-bit mask and calculate checksum
+        sum = sum & 0xFFFF;
+        int checksum = (0x5A3C - sum) & 0xFFFF;
+
+        // Store as 7-bit value for MIDI compliance
+        result.checksum = checksum & 0x7F;
+    
+    }
+    else
+    {
+        result.errorMessage = "Unknown checksum type";
+        return result;
+	}
     result.success = true;
     return result;
 }
