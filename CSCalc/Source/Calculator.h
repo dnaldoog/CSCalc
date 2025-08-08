@@ -19,7 +19,8 @@ public:
         XOR,
 		OnesComplement,  // One's complement checksum
         SimpleSumming,
-        Sony
+        Sony,
+		KawaiK5  // Kawai K5 checksum
     };
 
     enum class RangeType

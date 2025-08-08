@@ -347,6 +347,7 @@ void MainComponent::showSettingsDialog()
     checksumOptions.add("1's Complement - E-mu,Korg etc");
     checksumOptions.add("Simple Sum + mask");
     checksumOptions.add("SONY MSB");
+    checksumOptions.add("Kawai K5");
     alert.addComboBox("checksumType", checksumOptions, "Checksum Type:");
     alert.getComboBoxComponent("checksumType")->setSelectedItemIndex(lastChecksumType);
 
@@ -412,8 +413,11 @@ void MainComponent::calculateChecksum()
         type = Calculator::ChecksumType::OnesComplement;
     else if (lastChecksumType == 3)
         type = Calculator::ChecksumType::SimpleSumming;
-    else
+    else if (lastChecksumType == 4)
         type = Calculator::ChecksumType::Sony;
+    else
+        type = Calculator::ChecksumType::KawaiK5;
+
     Calculator::RangeType rangeMethod = (lastRangeType == 0) ?
     Calculator::RangeType::StartEnd : Calculator::RangeType::StartLength;
 
@@ -432,8 +436,12 @@ void MainComponent::calculateChecksum()
         checksumTypeName = "One's Complement";
     else  if (lastChecksumType == 3)
         checksumTypeName = "Simple Sum AND 0x7F";
-    else
+	else if (lastChecksumType == 4)
         checksumTypeName = "SONY MSB";
+	else if (lastChecksumType == 5)
+        checksumTypeName = "Kawai K5";
+    else
+		checksumTypeName = "Unknown";
 
     juce::String rangeMethodName = (lastRangeType == 0) ? "Start + End Offset" : "Start + Length";
     juce::String hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum).toUpperCase();

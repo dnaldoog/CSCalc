@@ -80,9 +80,8 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
             sum += bytes[i];
         }
         // Roland-style checksum: take lower 7 bits and compute 2's complement
-		sum = ~sum & 0x7f; // Keep only lower 7 bits
-        result.checksum = ++sum;
-        //result.checksum = (128 - (sum % 128)) % 128;
+		sum = ( ~sum +1 ) & 0x7f; // Keep only lower 7 bits
+        result.checksum = sum;
     }
     else if (checksumType == ChecksumType::XOR)
     {
@@ -92,7 +91,7 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         {
             xorResult ^= bytes[i];
         }
-        result.checksum = xorResult;
+        result.checksum = xorResult & 0x7f;
     }
     else if (checksumType == ChecksumType::OnesComplement)
     {
@@ -102,7 +101,7 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         {
             o += bytes[i];
         }
-        result.checksum = ~o &0x7f;
+        result.checksum = ~o & 0x7f;
     }
     else if (checksumType == ChecksumType::SimpleSumming)
     {
@@ -112,7 +111,7 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         {
             sum += bytes[i];
         }
-        result.checksum = sum &0x7f;
+        result.checksum = sum & 0x7f;
     }
     else if (checksumType == ChecksumType::Sony)
     {
@@ -122,9 +121,39 @@ ChecksumResult Calculator::calculateChecksum(const std::string& hexString, int s
         {
             sum += bytes[i];
         }
-        result.checksum = sum & 0xFF00 >> 8;
+        result.checksum = (sum & 0xFF00 >> 8) & 0x7f;
     }
+    else if (checksumType == ChecksumType::KawaiK5)
+    {
+        // Kawai K5 checksum
+        int sum = 0;
+        int oddSum = 0;
+        int evenSum = 0;
+        for (int i = startByte; i < startByte + numBytes; ++i)
+        {
+            int relativePosition = i - startByte;
 
+            if (relativePosition % 2 == 0) // Even position (0-indexed relative to start)
+            {
+                evenSum += bytes[i];
+            }
+            else // Odd position (0-indexed relative to start)
+            {
+                oddSum += bytes[i];
+            }
+        }
+        // Kawai magic number is 0x5A3C
+        const int kawaiMagicNumber = 0x5A3C;
+        // Calculate checksum: magic_number - odd_sum - even_sum
+        int checksum = (kawaiMagicNumber - oddSum - evenSum) & 0xFF;
+        // Write checksum to the designated position
+        result.checksum = checksum & 0x7f;
+    }
+    else
+    {
+        result.errorMessage = "Unknown checksum type";
+        return result;
+	}
     result.success = true;
     return result;
 }
