@@ -8,6 +8,7 @@
 - #### Simple Summing (additive) AND 0x7f
 - #### SONY checksums MSB
 - #### XOR checksums
+- #### Kawai K5 checksums
     - Many manufacturers also use this system.
 ----
 Paste in a sysex string and enter the start byte for the data.<BR>
