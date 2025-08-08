@@ -29,7 +29,7 @@ The checksum (0x3B) can be calculated by entering in:
 
 - Version v5.0 -  08/08/2025
     - Slight refactor of Roland checksum
-    - Added Kawaii K5(m) checksum
+    - Added Kawai K5(m) checksum
 - Version v4.0 -  08/07/2025
     - Using Slider() for star/end parameters
     - Added SONY MSB checksum
