@@ -7,7 +7,7 @@
 namespace BinaryData
 {
 
-//================== icon.png ==================
+//================== scc.png ==================
 static const unsigned char temp_binary_data_0[] =
 { 137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,90,0,0,0,90,8,2,0,0,0,183,202,214,85,0,0,30,179,73,68,65,84,120,218,173,124,105,119,28,199,149,229,91,34,183,42,108,196,202,13,20,65,205,184,189,140,229,35,89,109,107,198,238,125,108,234,63,116,255,
 207,57,199,211,103,78,139,244,180,151,105,201,75,219,45,183,109,109,4,9,144,4,9,130,0,106,201,204,136,120,243,33,34,50,35,179,18,32,213,109,170,14,88,44,20,160,202,151,247,222,119,223,123,17,129,155,127,255,15,32,34,0,0,238,111,145,240,44,252,37,210,
@@ -122,7 +122,7 @@ static const unsigned char temp_binary_data_0[] =
 164,248,249,128,136,160,175,62,27,237,232,29,122,221,27,56,70,150,163,139,145,40,60,202,209,132,65,24,37,33,73,9,28,46,254,250,250,181,202,218,123,135,135,115,13,179,38,22,157,38,93,155,74,20,129,219,141,179,51,202,255,124,107,251,23,207,143,254,237,
 197,233,204,216,137,182,149,129,90,68,91,108,167,199,17,40,164,51,7,186,232,148,78,127,145,216,94,173,180,40,16,145,166,199,209,29,74,71,100,198,206,9,151,189,32,64,91,182,252,127,96,16,6,120,211,38,224,237,0,0,0,0,73,69,78,68,174,66,96,130,0,0 };
 
-const char* icon_png = (const char*) temp_binary_data_0;
+const char* scc_png = (const char*) temp_binary_data_0;
 
 
 const char* getNamedResource (const char* resourceNameUTF8, int& numBytes);
@@ -136,7 +136,7 @@ const char* getNamedResource (const char* resourceNameUTF8, int& numBytes)
 
     switch (hash)
     {
-        case 0xd4093963:  numBytes = 7916; return icon_png;
+        case 0x71fc5bfd:  numBytes = 7916; return scc_png;
         default: break;
     }
 
@@ -146,12 +146,12 @@ const char* getNamedResource (const char* resourceNameUTF8, int& numBytes)
 
 const char* namedResourceList[] =
 {
-    "icon_png"
+    "scc_png"
 };
 
 const char* originalFilenames[] =
 {
-    "icon.png"
+    "scc.png"
 };
 
 const char* getNamedResourceOriginalFilename (const char* resourceNameUTF8);
