@@ -347,7 +347,7 @@ void MainComponent::showSettingsDialog()
     checksumOptions.add("1's Complement - E-mu,Korg etc");
     checksumOptions.add("Simple Sum + mask");
     checksumOptions.add("SONY MSB");
-    checksumOptions.add("Kawai K5");
+   // checksumOptions.add("Kawai K5");
     alert.addComboBox("checksumType", checksumOptions, "Checksum Type:");
     alert.getComboBoxComponent("checksumType")->setSelectedItemIndex(lastChecksumType);
 
