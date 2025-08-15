@@ -347,7 +347,7 @@ void MainComponent::showSettingsDialog()
     checksumOptions.add("1's Complement - E-mu,Korg etc");
     checksumOptions.add("Simple Sum + mask");
     checksumOptions.add("SONY MSB");
-    //checksumOptions.add("Kawai K5");
+   // checksumOptions.add("Kawai K5");
     alert.addComboBox("checksumType", checksumOptions, "Checksum Type:");
     alert.getComboBoxComponent("checksumType")->setSelectedItemIndex(lastChecksumType);
 
@@ -443,10 +443,44 @@ void MainComponent::calculateChecksum()
     else
 		checksumTypeName = "Unknown";
 
-    juce::String rangeMethodName = (lastRangeType == 0) ? "Start + End Offset" : "Start + Length";
-    juce::String hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum).toUpperCase();
-    juce::String intChecksum = juce::String(calcResult.checksum);
-    checksumValueLabel.setText(hexChecksum, juce::dontSendNotification);
+    juce::String hexChecksum;
+    juce::String intChecksum;
+
+    if (calcResult.is16Bit) {
+        // Display as 16-bit value
+        hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum16).paddedLeft('0', 4).toUpperCase();
+        intChecksum = juce::String(calcResult.checksum16);
+
+        // For the large checksum display, show both bytes
+        juce::String displayValue = juce::String::toHexString((calcResult.checksum16 >> 8) & 0xFF).paddedLeft('0', 2).toUpperCase() +
+            " " +
+            juce::String::toHexString(calcResult.checksum16 & 0xFF).paddedLeft('0', 2).toUpperCase();
+        checksumValueLabel.setText(displayValue, juce::dontSendNotification);
+    }
+    else {
+        // Display as 8-bit value (existing logic)
+        hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum).toUpperCase();
+        intChecksum = juce::String(calcResult.checksum);
+        checksumValueLabel.setText(hexChecksum, juce::dontSendNotification);
+    }
+ //   juce::String hexChecksum;
+ //   juce::String intChecksum;
+ //   hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum16).paddedLeft('0', 4).toUpperCase();
+ //   intChecksum = juce::String(calcResult.checksum16);
+ //   if (calcResult.is16Bit)
+ //   {
+ //       hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum16).paddedLeft('0', 4).toUpperCase();
+ //       intChecksum = juce::String(calcResult.checksum16);
+ //   }
+ //   else
+ //   {
+ //       hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum).paddedLeft('0', 2).toUpperCase();
+ //       intChecksum = juce::String(calcResult.checksum);
+	//}
+ //   juce::String rangeMethodName = (lastRangeType == 0) ? "Start + End Offset" : "Start + Length";
+ //   juce::String hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum).toUpperCase();
+ //   juce::String intChecksum = juce::String(calcResult.checksum);
+ //   checksumValueLabel.setText(hexChecksum, juce::dontSendNotification);
 
     juce::MemoryBlock hexData;
     juce::MemoryBlock dataCalc;
@@ -485,7 +519,7 @@ void MainComponent::calculateChecksum()
     resultText << "Original SysEx: " << sysexString << "\n";
     resultText << "Corrected SysEx: " << correctedSysExString << "\n";
     resultText << "Parsed Data: " << parsedDataHex << "\n";
-    resultText << "Range Method: " << rangeMethodName << "\n";
+    //resultText << "Range Method: " << rangeMethodName << "\n";
     resultText << "Start Byte: " << lastStartByte << "\n";
     if (lastRangeType == 0)
         resultText << "End Offset: " << lastParam2 << " (bytes from end)\n";
