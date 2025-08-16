@@ -42,6 +42,7 @@ private:
 
     juce::Label checksumLabel;
     juce::Label checksumValueLabel;
+    juce::Label versionLabel;
 
     // Calculator and settings
     Calculator calculator;
@@ -54,7 +55,8 @@ private:
     int lastParam2 = 2;
     int lastRangeType = 0;
     int lastChecksumType = 0;
-
+	int versionMajor = 6;
+	int versionMinor = 0;
     // Store the corrected SysEx string for copying
     juce::String correctedSysExString;
 

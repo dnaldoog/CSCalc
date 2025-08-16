@@ -44,6 +44,14 @@ MainComponent::MainComponent()
     sysexInput.setTextToShowWhenEmpty("Enter SysEx data here (e.g., F0 41 10 42 xx xx F7)", juce::Colours::grey);
     addAndMakeVisible(sysexInput);
 
+	// Version label
+    versionLabel.setText("Version: " + juce::String(versionMajor) + "." + juce::String(versionMinor),
+        juce::dontSendNotification);
+    versionLabel.setFont(juce::Font(14.0f, juce::Font::plain));
+    versionLabel.setColour(juce::Label::textColourId, juce::Colours::blue);
+    versionLabel.setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(versionLabel); 
+    
     // Setup result display
 	resultLabel.setColour(juce::Label::textColourId,juce::Colours::black);
     resultLabel.setText("Calculation Results:", juce::dontSendNotification);
@@ -240,6 +248,9 @@ void MainComponent::resized()
     int checksumValueWidth = 200;
     int checksumStartX = (checksumArea.getWidth() - checksumValueWidth) / 2;
 
+    auto windowBounds = getLocalBounds();
+    versionLabel.setBounds(windowBounds.getWidth() - 150, windowBounds.getHeight() - 25, 140, 20);
+
     checksumLabel.setBounds(checksumStartX, checksumArea.getY(), checksumValueWidth, 20);
     checksumValueLabel.setBounds(checksumStartX, checksumArea.getY() + 25, checksumValueWidth, 50);
 
@@ -342,12 +353,12 @@ void MainComponent::showSettingsDialog()
 
     // Add combo box for checksum type
     juce::StringArray checksumOptions;
-    checksumOptions.add("Additive Checksum (Roland/Yamaha style)");
-    checksumOptions.add("XOR Checksum");
+    checksumOptions.add("2's Complement (Roland/Yamaha)");
+    checksumOptions.add("XOR");
     checksumOptions.add("1's Complement - E-mu,Korg etc");
-    checksumOptions.add("Simple Sum + mask");
-    checksumOptions.add("SONY MSB");
-    checksumOptions.add("Kawai K5");
+    checksumOptions.add("Summed");
+    //checksumOptions.add("SONY MSB");
+    //checksumOptions.add("Kawai K5");
     alert.addComboBox("checksumType", checksumOptions, "Checksum Type:");
     alert.getComboBoxComponent("checksumType")->setSelectedItemIndex(lastChecksumType);
 
