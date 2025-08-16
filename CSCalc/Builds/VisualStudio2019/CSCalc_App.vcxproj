@@ -1638,7 +1638,7 @@
     <ClInclude Include="..\..\JuceLibraryCode\JuceHeader.h"/>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\scc.png"/>
+    <None Include="..\..\..\csc.png"/>
     <None Include="..\..\..\..\CtrlrX\JUCE\modules\juce_core\native\java\README.txt"/>
     <None Include="..\..\..\..\CtrlrX\JUCE\modules\juce_graphics\image_formats\jpglib\changes to libjpeg for JUCE.txt"/>
     <None Include="..\..\..\..\CtrlrX\JUCE\modules\juce_graphics\image_formats\pnglib\libpng_readme.txt"/>

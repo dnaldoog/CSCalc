@@ -30,7 +30,6 @@
 /* Begin PBXFileReference section */
 		0073BE0746AB55341C5954B7 /* CustomSliderComponent.h */ /* CustomSliderComponent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CustomSliderComponent.h; path = ../../Source/CustomSliderComponent.h; sourceTree = SOURCE_ROOT; };
 		0F17E84D37CD09436037B00B /* QuartzCore.framework */ /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		14A34A69CF5489E581C7D073 /* scc.png */ /* scc.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = scc.png; path = ../../../scc.png; sourceTree = SOURCE_ROOT; };
 		2116AF47C87884EBDF15577E /* juce_data_structures */ /* juce_data_structures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_data_structures; path = "~/JUCE/modules/juce_data_structures"; sourceTree = "<absolute>"; };
 		23630238DDE30F4A9A3ED2A3 /* MainComponent.h */ /* MainComponent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MainComponent.h; path = ../../Source/MainComponent.h; sourceTree = SOURCE_ROOT; };
 		2CF80C09B1BFC5C9B5EE5457 /* RecentFilesMenuTemplate.nib */ /* RecentFilesMenuTemplate.nib */ = {isa = PBXFileReference; lastKnownFileType = file.nib; name = RecentFilesMenuTemplate.nib; path = RecentFilesMenuTemplate.nib; sourceTree = SOURCE_ROOT; };
@@ -56,6 +55,7 @@
 		D90B5874F4A5B0264CA5E39A /* App */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CSCalc.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0B1F5488E6D25B8AEB963A1 /* Carbon.framework */ /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
 		F25FFE8A8656B023E857E4FE /* include_juce_data_structures.mm */ /* include_juce_data_structures.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_data_structures.mm; path = ../../JuceLibraryCode/include_juce_data_structures.mm; sourceTree = SOURCE_ROOT; };
+		F53EFFA1A53D542F7012CB90 /* csc.png */ /* csc.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = csc.png; path = ../../../csc.png; sourceTree = SOURCE_ROOT; };
 		F6ED805275A9AEFC5AD49368 /* Main.cpp */ /* Main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Main.cpp; path = ../../Source/Main.cpp; sourceTree = SOURCE_ROOT; };
 		F8C46BBE9BED61D5E79295FB /* Calculator.h */ /* Calculator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Calculator.h; path = ../../Source/Calculator.h; sourceTree = SOURCE_ROOT; };
 		FD6E3D1E4AE89E8DD65400DA /* MidiManufacturer.cpp */ /* MidiManufacturer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = MidiManufacturer.cpp; path = ../../Source/MidiManufacturer.cpp; sourceTree = SOURCE_ROOT; };
@@ -119,11 +119,11 @@
 				AFE9A447A571ACCF7ACEEA60,
 				5D1A3ED50099D74A467DCE80,
 				F8C46BBE9BED61D5E79295FB,
+				F53EFFA1A53D542F7012CB90,
 				CDBED57DA4601425ABF9ECB8,
 				0073BE0746AB55341C5954B7,
 				FD6E3D1E4AE89E8DD65400DA,
 				7CF96CA1675F5B3005B02F94,
-				14A34A69CF5489E581C7D073,
 			);
 			name = CSCalc;
 			sourceTree = "<group>";

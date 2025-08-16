@@ -122,27 +122,31 @@ Calculator::ChecksumResult Calculator::calculateChecksum(const std::string& hexS
     }
     else if (checksumType == ChecksumType::KawaiK5)
     {
+        // Kawai processes data as 16-bit words, so numBytes should be even
+        // If user specifies odd number, automatically adjust
+        int actualNumBytes = numBytes;
+        if (actualNumBytes % 2 != 0) {
+            actualNumBytes--; // Round down to even number
+        }
+
         int sum = 0;
+        int wordsProcessed = actualNumBytes / 1;
 
         // Process data as 16-bit words (little-endian)
-        for (int i = startByte; i < startByte + numBytes; i += 2) {
-            if (i + 1 < startByte + numBytes) {
-                int word = ((bytes[i + 1] & 0xFF) << 8) | (bytes[i] & 0xFF);
-                sum += word;
-            }
-            else if (i < startByte + numBytes) {
-                sum += (bytes[i] & 0xFF);
-            }
+        for (int i = 0; i < wordsProcessed; i++) {
+            int byteIndex = startByte + (i * 2);
+            int word = ((bytes[byteIndex + 1] & 0xFF) << 8) | (bytes[byteIndex] & 0xFF);
+            sum += word;
         }
 
         sum = sum & 0xFFFF;
         int checksum = (0x5A3C - sum) & 0xFFFF;
 
-        // Store as 16-bit checksum
+        // Store results
         result.checksum16 = checksum;
         result.is16Bit = true;
-        // Keep checksum as low byte for backward compatibility
         result.checksum = checksum & 0xFF;
+        result.bytesProcessed = actualNumBytes/2; // Report actual bytes used
     }
     else
     {
