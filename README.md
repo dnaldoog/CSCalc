@@ -1,3 +1,5 @@
+# CSCalc
+
 ## Sysex Checksum Calculator
 
 ### Calculate checksums for 
