@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 135.46667 135.46667"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.2 (b8e25be833, 2022-02-05)"
+   sodipodi:docname="csc.svg"
+   inkscape:export-filename="C:\Users\zan64\Desktop\scc.png"
+   inkscape:export-xdpi="96.000008"
+   inkscape:export-ydpi="96.000008"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.733172"
+     inkscape:cx="281.65287"
+     inkscape:cy="200.49866"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer3"
+     units="px"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
+  <defs
+     id="defs2">
+    <filter
+       style="color-interpolation-filters:sRGB"
+       x="-0.067862297"
+       width="1.1357246"
+       y="-0.066772136"
+       height="1.1335443"
+       inkscape:menu="Non-Realistic 3D Shaders"
+       inkscape:menu-tooltip="Unrealistic reflections with sharp edges"
+       inkscape:label="Sharp Deco"
+       id="filter1353">
+      <feGaussianBlur
+         result="result8"
+         stdDeviation="5"
+         in="SourceGraphic"
+         id="feGaussianBlur1333" />
+      <feComposite
+         in="SourceGraphic"
+         result="result19"
+         in2="result8"
+         operator="out"
+         id="feComposite1335" />
+      <feComposite
+         k2="1"
+         operator="arithmetic"
+         result="result17"
+         in2="result8"
+         id="feComposite1337"
+         k1="0"
+         k3="0"
+         k4="0" />
+      <feComposite
+         in2="result19"
+         in="result17"
+         operator="atop"
+         result="result6"
+         id="feComposite1339" />
+      <feOffset
+         result="result18"
+         id="feOffset1341" />
+      <feDisplacementMap
+         in2="result6"
+         result="result4"
+         scale="100"
+         yChannelSelector="A"
+         xChannelSelector="A"
+         in="result18"
+         id="feDisplacementMap1343" />
+      <feComposite
+         in2="result18"
+         in="result4"
+         operator="arithmetic"
+         result="result2"
+         k3="1"
+         k2="1"
+         id="feComposite1345"
+         k1="0"
+         k4="0" />
+      <feComposite
+         in2="result4"
+         operator="over"
+         in="result2"
+         result="fbSourceGraphic"
+         id="feComposite1347" />
+      <feComposite
+         in2="result18"
+         operator="xor"
+         result="result15"
+         id="feComposite1349" />
+      <feComposite
+         result="result16"
+         in2="SourceGraphic"
+         operator="in"
+         in="result15"
+         id="feComposite1351" />
+    </filter>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath1465">
+      <circle
+         style="fill:#000000;stroke:#b3b3b3;stroke-width:8.21658;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
+         id="circle1467"
+         cx="57.420135"
+         cy="57.420135"
+         r="48.61153" />
+    </clipPath>
+  </defs>
+  <g
+     inkscape:label="Base"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-28.837891,-37.859757)"
+     style="display:inline" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="orange decoration"
+     style="display:inline"
+     transform="translate(-4.7003111,-4.7003109)" />
+  <g
+     inkscape:label="grey ring"
+     inkscape:groupmode="layer"
+     id="g1489"
+     transform="translate(-28.837891,-37.859757)"
+     style="display:inline" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="MQ9 LiquidCrystalText"
+     transform="translate(-4.7003111,-4.7003109)">
+    <circle
+       style="display:inline;fill:#000000;stroke:#b3b3b3;stroke-width:10.5565;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
+       id="path1042"
+       cx="72.433647"
+       cy="72.433647"
+       r="62.455078" />
+    <circle
+       style="display:inline;fill:none;stroke:#b3b3b3;stroke-width:10.5565;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
+       id="circle1487"
+       cx="72.433647"
+       cy="72.433647"
+       r="62.455078" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:45.6146px;line-height:1.25;font-family:'MQ9 LiquidCrystalText';-inkscape-font-specification:'MQ9 LiquidCrystalText';fill:#00ff00;stroke-width:3.4211"
+       x="25.359341"
+       y="89.767189"
+       id="text2839"><tspan
+         sodipodi:role="line"
+         id="tspan2837"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'MQ9 LiquidCrystalText';-inkscape-font-specification:'MQ9 LiquidCrystalText';fill:#00ff00;stroke-width:3.4211"
+         x="25.359341"
+         y="89.767189">CSC</tspan></text>
+  </g>
+</svg>

@@ -2549,7 +2549,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\scc.png">
+    <None Include="..\..\..\csc.png">
       <Filter>CSCalc</Filter>
     </None>
     <None Include="..\..\..\..\CtrlrX\JUCE\modules\juce_core\native\java\README.txt">
