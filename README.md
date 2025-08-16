@@ -30,6 +30,9 @@ The checksum (0x3B) can be calculated by entering in:
 
 ### CHANGELOG
 
+- Version v6.0 -  08/16/2025
+    - Changed name from Sysex checksum Calculator to CSCalc
+    - Changed logo
 - Version v5.1 -  08/09/2025
     - removed Kawai K5 checksum code
 - Version v5.0 -  08/08/2025
