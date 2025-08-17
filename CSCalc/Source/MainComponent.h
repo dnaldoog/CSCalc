@@ -55,10 +55,21 @@ private:
     int lastParam2 = 2;
     int lastRangeType = 0;
     int lastChecksumType = 0;
-	int versionMajor = 6;
-	int versionMinor = 0;
     // Store the corrected SysEx string for copying
     juce::String correctedSysExString;
+
+    std::unique_ptr<juce::MidiOutput> midiOutput;
+    juce::String selectedMidiOutputDevice;
+    juce::TextButton sendMidiButton;
+
+    // MIDI methods
+    void showMidiSettingsDialog();
+    void sendSysExMessage();
+    juce::MidiMessage createSysExFromString(const juce::String& hexString);
+
+    // Settings keys for MIDI
+    void loadMidiSettings();
+    void saveMidiSettings();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

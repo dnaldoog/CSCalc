@@ -3,7 +3,7 @@
 <JUCERPROJECT id="NydGnL" name="CSCalc" projectType="guiapp" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1"
               cppLanguageStandard="14" splashScreenColour="Light" bundleIdentifier="dnaldoog.topaz.ne.jp"
-              companyWebsite="dnaldoog.topaz.ne.jp">
+              companyWebsite="dnaldoog.topaz.ne.jp" defines="APP_VERSION_MAJOR=7&#10;APP_VERSION_MINOR=0">
   <MAINGROUP id="jsr4Bo" name="CSCalc">
     <GROUP id="{BF60EF84-2165-7713-9569-8A6C0D7AC9B0}" name="Source">
       <FILE id="OXQoP0" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
@@ -36,6 +36,8 @@
         <MODULEPATH id="juce_events" path="../../CtrlrX/JUCE/modules"/>
         <MODULEPATH id="juce_graphics" path="../../CtrlrX/JUCE/modules"/>
         <MODULEPATH id="juce_gui_basics" path="../../CtrlrX/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../../CtrlrX/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../../CtrlrX/JUCE/modules"/>
       </MODULEPATHS>
     </VS2022>
     <XCODE_MAC targetFolder="Builds/MacOSX" smallIcon="XgGwsF" bigIcon="XgGwsF">
@@ -49,6 +51,8 @@
         <MODULEPATH id="juce_events"/>
         <MODULEPATH id="juce_data_structures"/>
         <MODULEPATH id="juce_core"/>
+        <MODULEPATH id="juce_audio_devices" path="../../CtrlrX/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../../CtrlrX/JUCE/modules"/>
       </MODULEPATHS>
     </XCODE_MAC>
     <VS2019 targetFolder="Builds/VisualStudio2019">
@@ -62,10 +66,14 @@
         <MODULEPATH id="juce_events"/>
         <MODULEPATH id="juce_data_structures"/>
         <MODULEPATH id="juce_core"/>
+        <MODULEPATH id="juce_audio_devices" path="../../CtrlrX/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../../CtrlrX/JUCE/modules"/>
       </MODULEPATHS>
     </VS2019>
   </EXPORTFORMATS>
   <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>

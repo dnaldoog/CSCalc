@@ -45,7 +45,7 @@ MainComponent::MainComponent()
     addAndMakeVisible(sysexInput);
 
 	// Version label
-    versionLabel.setText("Version: " + juce::String(versionMajor) + "." + juce::String(versionMinor),
+    versionLabel.setText("Version: " + juce::String(APP_VERSION_MAJOR) + "." + juce::String(APP_VERSION_MINOR),
         juce::dontSendNotification);
     versionLabel.setFont(juce::Font(14.0f, juce::Font::plain));
     versionLabel.setColour(juce::Label::textColourId, juce::Colours::blue);
@@ -78,6 +78,16 @@ MainComponent::MainComponent()
     checksumValueLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(checksumValueLabel);
 
+    // Setup MIDI send button
+    sendMidiButton.setButtonText("Send MIDI");
+    sendMidiButton.addListener(this);
+    sendMidiButton.setEnabled(false); // Disabled until we have a result and MIDI output
+    sendMidiButton.setTooltip("Send the corrected SysEx message via MIDI");
+    addAndMakeVisible(sendMidiButton);
+
+    // Load MIDI settings
+    loadMidiSettings();
+
     DBG("Actual window size: " + juce::String(getWidth()) + " x " + juce::String(getHeight()));
     centreWithSize(650, 700); // Alternative that might work better
 }
@@ -85,6 +95,8 @@ MainComponent::MainComponent()
 MainComponent::~MainComponent()
 {
     saveSettings();
+    saveMidiSettings();  // Save MIDI settings
+    midiOutput.reset();  // Clean up MIDI output
 }
 
 
@@ -106,6 +118,7 @@ void MainComponent::saveSettings()
         settingsFile->setValue("param2", lastParam2);
         settingsFile->setValue("rangeType", lastRangeType);
         settingsFile->setValue("checksumType", lastChecksumType);
+        saveMidiSettings();
         settingsFile->saveIfNeeded();
     }
 }
@@ -209,7 +222,7 @@ void MainComponent::paint(juce::Graphics& g)
     g.fillAll(juce::Colours::lightgrey);  // Or lightgrey, aliceblue, etc.
     g.setColour(juce::Colours::darkgrey);
     g.setFont(26.0f);
-    g.drawText("MIDI SysEx Checksum Calculator", getLocalBounds().removeFromTop(50),
+    g.drawText("CSCalc MIDI SysEx Checksum Calculator", getLocalBounds().removeFromTop(50),
         juce::Justification::centred, true);
 }
 
@@ -219,17 +232,18 @@ void MainComponent::resized()
     bounds.removeFromTop(60); // Space for title
     bounds.reduce(20, 20);
 
-    // Button area - center aligned
+    // Button area - center aligned (5 buttons now)
     auto buttonArea = bounds.removeFromTop(40);
-    int buttonWidth = 110;
-    int buttonSpacing = 10;
-    int totalButtonWidth = (buttonWidth * 4) + (buttonSpacing * 3);
+    int buttonWidth = 100;
+    int buttonSpacing = 8;
+    int totalButtonWidth = (buttonWidth * 5) + (buttonSpacing * 4);
     int startX = (buttonArea.getWidth() - totalButtonWidth) / 2;
 
     settingsButton.setBounds(startX, buttonArea.getY(), buttonWidth, buttonArea.getHeight());
     calculateButton.setBounds(startX + buttonWidth + buttonSpacing, buttonArea.getY(), buttonWidth, buttonArea.getHeight());
     copyResultButton.setBounds(startX + (buttonWidth + buttonSpacing) * 2, buttonArea.getY(), buttonWidth, buttonArea.getHeight());
-    clearButton.setBounds(startX + (buttonWidth + buttonSpacing) * 3, buttonArea.getY(), buttonWidth, buttonArea.getHeight());
+    sendMidiButton.setBounds(startX + (buttonWidth + buttonSpacing) * 3, buttonArea.getY(), buttonWidth, buttonArea.getHeight());
+    clearButton.setBounds(startX + (buttonWidth + buttonSpacing) * 4, buttonArea.getY(), buttonWidth, buttonArea.getHeight());
 
     bounds.removeFromTop(20); // Spacing
 
@@ -331,6 +345,10 @@ void MainComponent::buttonClicked(juce::Button* button)
             clearButton.setButtonText("Clear All");
             });
     }
+    else if (button == &sendMidiButton)
+    {
+        sendSysExMessage();
+    }
 }
 
 void MainComponent::showSettingsDialog()
@@ -363,6 +381,7 @@ void MainComponent::showSettingsDialog()
     alert.getComboBoxComponent("checksumType")->setSelectedItemIndex(lastChecksumType);
 
     alert.addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    alert.addButton("MIDI Settings", 2);
     alert.addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
 
     int result = alert.runModalLoop();
@@ -394,6 +413,10 @@ void MainComponent::showSettingsDialog()
         juce::Timer::callAfterDelay(1000, [this]() {
             settingsButton.setButtonText("Settings");
             });
+    }
+    else if (result == 2) // MIDI Settings button pressed
+    {
+        showMidiSettingsDialog();
     }
 }
 
@@ -474,25 +497,6 @@ void MainComponent::calculateChecksum()
         intChecksum = juce::String(calcResult.checksum);
         checksumValueLabel.setText(hexChecksum, juce::dontSendNotification);
     }
- //   juce::String hexChecksum;
- //   juce::String intChecksum;
- //   hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum16).paddedLeft('0', 4).toUpperCase();
- //   intChecksum = juce::String(calcResult.checksum16);
- //   if (calcResult.is16Bit)
- //   {
- //       hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum16).paddedLeft('0', 4).toUpperCase();
- //       intChecksum = juce::String(calcResult.checksum16);
- //   }
- //   else
- //   {
- //       hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum).paddedLeft('0', 2).toUpperCase();
- //       intChecksum = juce::String(calcResult.checksum);
-	//}
- //   juce::String rangeMethodName = (lastRangeType == 0) ? "Start + End Offset" : "Start + Length";
- //   juce::String hexChecksum = "0x" + juce::String::toHexString(calcResult.checksum).toUpperCase();
- //   juce::String intChecksum = juce::String(calcResult.checksum);
- //   checksumValueLabel.setText(hexChecksum, juce::dontSendNotification);
-
     juce::MemoryBlock hexData;
     juce::MemoryBlock dataCalc;
     hexData.loadFromHexString(processedSysExString);
@@ -543,10 +547,185 @@ void MainComponent::calculateChecksum()
 
     resultDisplay.setText(resultText);
     copyResultButton.setEnabled(true);
-
+    sendMidiButton.setEnabled(midiOutput != nullptr && !correctedSysExString.isEmpty());
     // Provide visual feedback
     calculateButton.setButtonText("Calculated!");
     juce::Timer::callAfterDelay(1000, [this]() {
         calculateButton.setButtonText("Calculate");
         });
+}
+
+void MainComponent::loadMidiSettings()
+{
+    selectedMidiOutputDevice = settingsFile->getValue("midiOutputDevice", "");
+
+    // Try to open the previously selected MIDI device
+    if (selectedMidiOutputDevice.isNotEmpty())
+    {
+        auto midiDevices = juce::MidiOutput::getAvailableDevices();
+        for (const auto& device : midiDevices)
+        {
+            if (device.name == selectedMidiOutputDevice)
+            {
+                midiOutput = juce::MidiOutput::openDevice(device.identifier);
+                if (midiOutput != nullptr)
+                {
+                    sendMidiButton.setEnabled(!correctedSysExString.isEmpty());
+                }
+                break;
+            }
+        }
+    }
+}
+
+void MainComponent::saveMidiSettings()
+{
+    if (settingsFile != nullptr)
+    {
+        settingsFile->setValue("midiOutputDevice", selectedMidiOutputDevice);
+    }
+}
+
+void MainComponent::showMidiSettingsDialog()
+{
+    juce::AlertWindow alert("MIDI Settings",
+        "Select MIDI output device:",
+        juce::AlertWindow::NoIcon);
+
+    // Get available MIDI devices
+    auto midiDevices = juce::MidiOutput::getAvailableDevices();
+    juce::StringArray deviceNames;
+    deviceNames.add("(None)");
+
+    for (const auto& device : midiDevices)
+    {
+        deviceNames.add(device.name);
+    }
+
+    alert.addComboBox("midiOutput", deviceNames, "MIDI Output:");
+
+    // Set current selection
+    int currentIndex = 0;
+    if (selectedMidiOutputDevice.isNotEmpty())
+    {
+        currentIndex = deviceNames.indexOf(selectedMidiOutputDevice);
+        if (currentIndex == -1) currentIndex = 0;
+    }
+    alert.getComboBoxComponent("midiOutput")->setSelectedItemIndex(currentIndex);
+
+    alert.addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    alert.addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+    int result = alert.runModalLoop();
+
+    if (result == 1) // OK button pressed
+    {
+        int selectedIndex = alert.getComboBoxComponent("midiOutput")->getSelectedItemIndex();
+
+        // Close current MIDI output
+        midiOutput.reset();
+        sendMidiButton.setEnabled(false);
+
+        if (selectedIndex > 0 && selectedIndex <= midiDevices.size())
+        {
+            // Open new MIDI device
+            auto& selectedDevice = midiDevices[selectedIndex - 1];
+            selectedMidiOutputDevice = selectedDevice.name;
+
+            midiOutput = juce::MidiOutput::openDevice(selectedDevice.identifier);
+            if (midiOutput != nullptr)
+            {
+                sendMidiButton.setEnabled(!correctedSysExString.isEmpty());
+
+                juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+                    "MIDI Connected",
+                    "Successfully connected to: " + selectedMidiOutputDevice);
+            }
+            else
+            {
+                juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                    "MIDI Error",
+                    "Failed to open MIDI device: " + selectedMidiOutputDevice);
+                selectedMidiOutputDevice = "";
+            }
+        }
+        else
+        {
+            selectedMidiOutputDevice = "";
+        }
+
+        saveMidiSettings();
+    }
+}
+
+juce::MidiMessage MainComponent::createSysExFromString(const juce::String& hexString)
+{
+    juce::MemoryBlock sysexData;
+    sysexData.loadFromHexString(hexString);
+
+    // Check if the data already starts with F0 and ends with F7
+    const uint8_t* data = static_cast<const uint8_t*>(sysexData.getData());
+    size_t dataSize = sysexData.getSize();
+
+    if (dataSize >= 2 && data[0] == 0xF0 && data[dataSize - 1] == 0xF7)
+    {
+        // The data already has F0/F7 wrapper, so extract just the middle part
+        // JUCE's createSysExMessage will add its own F0/F7 wrapper
+        if (dataSize > 2)
+        {
+            return juce::MidiMessage::createSysExMessage(data + 1, (int)(dataSize - 2));
+        }
+        else
+        {
+            // Just F0 F7 with nothing in between - create empty SysEx
+            return juce::MidiMessage::createSysExMessage(nullptr, 0);
+        }
+    }
+    else
+    {
+        // The data doesn't have F0/F7 wrapper, so use it as-is
+        return juce::MidiMessage::createSysExMessage(data, (int)dataSize);
+    }
+}
+
+void MainComponent::sendSysExMessage()
+{
+    if (midiOutput == nullptr)
+    {
+        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+            "No MIDI Output", "Please configure a MIDI output device in Settings first.");
+        return;
+    }
+
+    if (correctedSysExString.isEmpty())
+    {
+        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+            "No Message", "Please calculate a checksum first to generate a SysEx message.");
+        return;
+    }
+
+    try
+    {
+        juce::MidiMessage sysexMessage = createSysExFromString(correctedSysExString);
+        midiOutput->sendMessageNow(sysexMessage);
+
+        // Show confirmation
+        int messageSize = sysexMessage.getSysExDataSize();
+        juce::String confirmText = "Message sent: " + juce::String(messageSize) + " bytes\n";
+        confirmText += "Device: " + selectedMidiOutputDevice;
+
+        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+            "MIDI Sent", confirmText);
+
+        // Provide button feedback
+        sendMidiButton.setButtonText("Sent!");
+        juce::Timer::callAfterDelay(1500, [this]() {
+            sendMidiButton.setButtonText("Send MIDI");
+            });
+    }
+    catch (const std::exception& e)
+    {
+        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+            "MIDI Error", "Failed to send MIDI message: " + juce::String(e.what()));
+    }
 }
