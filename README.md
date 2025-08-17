@@ -26,10 +26,13 @@ The checksum (0x3B) can be calculated by entering in:
 - Start Byte Index=5 : End Offset =2 `03 00 01 10 31`
 - Start Byte Index=5 : Length =5 `03 00 01 10 31`
 
-<img width="947" height="760" alt="{AC91A0FA-FDE7-4A42-A94D-5FDC6D67201F}" src="https://github.com/user-attachments/assets/1ba99780-cf25-4a6a-9d5c-41ba5ebcb4a5" />
+<img width="671" height="754" alt="{A55605B5-1D84-43E7-98C8-2769F07A8892}" src="https://github.com/user-attachments/assets/51c2fc19-f516-44e3-a0c6-f9f42135efaf" />
+
 
 ### CHANGELOG
 
+- Version v7.0 -  08/17/2025
+    - Can now send MIDI out of corrected checksum message
 - Version v6.0 -  08/16/2025
     - Changed name from <span style="color:red">Sysex Checksum Calculator</span> to <span style="color:blue">CSCalc</span>
     - Changed logo
